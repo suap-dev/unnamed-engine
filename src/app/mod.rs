@@ -5,6 +5,7 @@ use winit::{
     window::{Window, WindowAttributes},
 };
 
+#[derive(Debug)]
 pub(crate) struct App {
     // TODO: add State
     window: Option<Window>,
@@ -21,15 +22,8 @@ impl App {
 impl winit::application::ApplicationHandler for App {
     fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
         // TODO: configure the Window with WindowAttributes
-        match event_loop.create_window(WindowAttributes::default()) {
-            Ok(window) => {
-                // Store the window if needed
-                self.window = Some(window);
-            }
-            Err(e) => {
-                eprintln!("Failed to create window: {:?}", e);
-            }
-        }
+        let window_attributes = WindowAttributes::default().with_title("unnamed-engine");
+        self.window = event_loop.create_window(window_attributes).ok();
     }
 
     fn window_event(
@@ -40,6 +34,7 @@ impl winit::application::ApplicationHandler for App {
     ) {
         match event {
             WindowEvent::CloseRequested => event_loop.exit(),
+            WindowEvent::RedrawRequested => {}
             WindowEvent::KeyboardInput {
                 event:
                     KeyEvent {
@@ -49,9 +44,25 @@ impl winit::application::ApplicationHandler for App {
                     },
                 ..
             } => {
-                // TODO: create a handler for this if we get more keys
-                if key_code == KeyCode::Escape && element_state.is_pressed() {
-                    event_loop.exit();
+                // TODO: create a handler for key events if we get more keys
+                log::debug!("{:?} {:?}", key_code, element_state);
+                if element_state.is_pressed() {
+                    match key_code {
+                        KeyCode::Escape | KeyCode::KeyQ => {
+                            log::info!("Exitting {:?}", &self);
+                            event_loop.exit();
+                        }
+                        KeyCode::KeyR => {
+                            log::info!("Manual redraw request of window: {:?}", &self.window);
+                            if let Some(window) = &self.window {
+                                window.request_redraw();
+                                log::info!("Redrawn window: {:?}", window);
+                            } else {
+                                log::error!("Couldn't redraw window: {:?}", &self.window);
+                            }
+                        }
+                        _ => (),
+                    }
                 }
             }
             _ => (),
