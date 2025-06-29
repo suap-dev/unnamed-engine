@@ -1,3 +1,5 @@
+mod state;
+
 use winit::{
     event::{KeyEvent, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
@@ -5,16 +7,22 @@ use winit::{
     window::{Window, WindowAttributes},
 };
 
+use crate::app::state::State;
+
 #[derive(Debug)]
 pub(crate) struct App {
     // TODO: add State
     window: Option<Window>,
+    state: State,
 }
 impl App {
     pub fn run() -> anyhow::Result<()> {
         // TODO: consider adding user events (custom Event enum), then EventLoop::with_user_event().build()?
         let event_loop = EventLoop::new()?;
-        let mut app = Self { window: None };
+        let mut app = Self {
+            window: None,
+            state: State::default(),
+        };
         event_loop.set_control_flow(winit::event_loop::ControlFlow::Poll);
         event_loop.run_app(&mut app)?;
         Ok(())
@@ -36,54 +44,70 @@ impl winit::application::ApplicationHandler for App {
         match event {
             WindowEvent::CloseRequested => event_loop.exit(),
             WindowEvent::RedrawRequested => {}
+            WindowEvent::MouseInput { state, button, .. } => {
+                log::debug!(
+                    "MouseInput: {:?} {:?} at {:?}",
+                    button,
+                    state,
+                    self.state.cursor_position
+                );
+            }
+            WindowEvent::MouseWheel { delta, phase, .. } => {
+                log::debug!(
+                    "MouseWheel: {:?} {:?} at {:?}",
+                    delta,
+                    phase,
+                    self.state.cursor_position
+                );
+            }
+            WindowEvent::CursorMoved { position, .. } => self.state.cursor_position = position,
             WindowEvent::KeyboardInput {
                 event:
                     KeyEvent {
                         physical_key: PhysicalKey::Code(key_code),
-                        state: element_state,
+                        state,
                         ..
                     },
                 ..
-            } => {
+            } if state.is_pressed() => {
+                // WARNING: we're ignoring state.is_released() cases!
                 // TODO: create a handler for key events if we get more keys
-                if element_state.is_pressed() {
-                    log::debug!("{:?} {:?}", key_code, element_state);
-                    match key_code {
-                        KeyCode::KeyT => {
-                            if log::log_enabled!(log::Level::Info) {
-                                log::info!("Toggle control flow requested for: {:?}", event_loop);
-                                log::info!(
-                                    "Switching from {:?}, new control flow: {:?}",
-                                    event_loop.control_flow(),
-                                    {
-                                        match event_loop.control_flow() {
-                                            ControlFlow::Poll => {
-                                                event_loop.set_control_flow(ControlFlow::Wait)
-                                            }
-                                            ControlFlow::Wait => {
-                                                event_loop.set_control_flow(ControlFlow::Poll)
-                                            }
-                                            _ => event_loop.set_control_flow(ControlFlow::Wait),
+                log::debug!("KeyboardInput: {:?} {:?}", key_code, state);
+                match key_code {
+                    KeyCode::KeyT => {
+                        if log::log_enabled!(log::Level::Info) {
+                            log::info!("Toggle control flow requested for: {:?}", event_loop);
+                            log::info!(
+                                "Switching from {:?}, new control flow: {:?}",
+                                event_loop.control_flow(),
+                                {
+                                    match event_loop.control_flow() {
+                                        ControlFlow::Poll => {
+                                            event_loop.set_control_flow(ControlFlow::Wait)
                                         }
-                                        event_loop.control_flow()
+                                        ControlFlow::Wait => {
+                                            event_loop.set_control_flow(ControlFlow::Poll)
+                                        }
+                                        _ => event_loop.set_control_flow(ControlFlow::Wait),
                                     }
-                                )
-                            }
+                                    event_loop.control_flow()
+                                }
+                            )
                         }
-                        KeyCode::Escape | KeyCode::KeyQ => {
-                            log::info!("Exitting {:?}", &self);
-                            event_loop.exit();
-                        }
-                        KeyCode::KeyR => {
-                            log::info!("Manual redraw requested for: {:?}", &self.window);
-                            if let Some(window) = &self.window {
-                                window.request_redraw();
-                            } else {
-                                log::error!("There is no spoon (no window): {:?}", &self.window);
-                            }
-                        }
-                        _ => (),
                     }
+                    KeyCode::Escape | KeyCode::KeyQ => {
+                        log::info!("Exitting {:?}", &self);
+                        event_loop.exit();
+                    }
+                    KeyCode::KeyR => {
+                        log::info!("Manual redraw requested for: {:?}", &self.window);
+                        if let Some(window) = &self.window {
+                            window.request_redraw();
+                        } else {
+                            log::error!("There is no spoon (no window): {:?}", &self.window);
+                        }
+                    }
+                    _ => (),
                 }
             }
             _ => (),
