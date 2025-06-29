@@ -1,6 +1,6 @@
 use winit::{
     event::{KeyEvent, WindowEvent},
-    event_loop::EventLoop,
+    event_loop::{ControlFlow, EventLoop},
     keyboard::{KeyCode, PhysicalKey},
     window::{Window, WindowAttributes},
 };
@@ -15,6 +15,7 @@ impl App {
         // TODO: consider adding user events (custom Event enum), then EventLoop::with_user_event().build()?
         let event_loop = EventLoop::new()?;
         let mut app = Self { window: None };
+        event_loop.set_control_flow(winit::event_loop::ControlFlow::Poll);
         event_loop.run_app(&mut app)?;
         Ok(())
     }
@@ -48,6 +49,27 @@ impl winit::application::ApplicationHandler for App {
                 if element_state.is_pressed() {
                     log::debug!("{:?} {:?}", key_code, element_state);
                     match key_code {
+                        KeyCode::KeyT => {
+                            if log::log_enabled!(log::Level::Info) {
+                                log::info!("Toggle control flow requested for: {:?}", event_loop);
+                                log::info!(
+                                    "Switching from {:?}, new control flow: {:?}",
+                                    event_loop.control_flow(),
+                                    {
+                                        match event_loop.control_flow() {
+                                            ControlFlow::Poll => {
+                                                event_loop.set_control_flow(ControlFlow::Wait)
+                                            }
+                                            ControlFlow::Wait => {
+                                                event_loop.set_control_flow(ControlFlow::Poll)
+                                            }
+                                            _ => event_loop.set_control_flow(ControlFlow::Wait),
+                                        }
+                                        event_loop.control_flow()
+                                    }
+                                )
+                            }
+                        }
                         KeyCode::Escape | KeyCode::KeyQ => {
                             log::info!("Exitting {:?}", &self);
                             event_loop.exit();
