@@ -45,20 +45,19 @@ impl winit::application::ApplicationHandler for App {
                 ..
             } => {
                 // TODO: create a handler for key events if we get more keys
-                log::debug!("{:?} {:?}", key_code, element_state);
                 if element_state.is_pressed() {
+                    log::debug!("{:?} {:?}", key_code, element_state);
                     match key_code {
                         KeyCode::Escape | KeyCode::KeyQ => {
                             log::info!("Exitting {:?}", &self);
                             event_loop.exit();
                         }
                         KeyCode::KeyR => {
-                            log::info!("Manual redraw request of window: {:?}", &self.window);
+                            log::info!("Manual redraw requested for: {:?}", &self.window);
                             if let Some(window) = &self.window {
                                 window.request_redraw();
-                                log::info!("Redrawn window: {:?}", window);
                             } else {
-                                log::error!("Couldn't redraw window: {:?}", &self.window);
+                                log::error!("There is no spoon (no window): {:?}", &self.window);
                             }
                         }
                         _ => (),
