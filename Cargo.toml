@@ -1,0 +1,13 @@
+[package]
+name = "unnamed-engine"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0"
+env_logger = "0.11"
+log = "0.4"
+pollster = "0.4"
+thiserror = "2.0"
+wgpu = "25.0"
+winit = "0.30"
