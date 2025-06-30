@@ -1,7 +1,7 @@
 mod state;
 
 use winit::{
-    event::{KeyEvent, WindowEvent},
+    event::{ElementState, KeyEvent, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     keyboard::{KeyCode, PhysicalKey},
     window::{Window, WindowAttributes},
@@ -27,12 +27,79 @@ impl App {
         event_loop.run_app(&mut app)?;
         Ok(())
     }
+
+    fn handle_key_event(
+        &self,
+        event_loop: &winit::event_loop::ActiveEventLoop,
+        key_event: KeyEvent,
+    ) {
+        let KeyEvent {
+            physical_key: PhysicalKey::Code(key_code),
+            state,
+            ..
+        } = key_event
+        else {
+            return;
+        };
+
+        log::debug!("KeyboardInput: {:?} {:?}", key_code, state);
+
+        match (key_code, state) {
+            (KeyCode::KeyT, ElementState::Pressed) => self.toggle_control_flow(event_loop),
+            (KeyCode::Escape, ElementState::Pressed) | (KeyCode::KeyQ, ElementState::Pressed) => {
+                self.exit(event_loop)
+            }
+            (KeyCode::KeyR, ElementState::Pressed) => self.request_redraw(),
+            _ => {}
+        }
+    }
+
+    fn toggle_control_flow(&self, event_loop: &winit::event_loop::ActiveEventLoop) {
+        let previous_flow = event_loop.control_flow();
+        let new_flow = match previous_flow {
+            ControlFlow::Poll => ControlFlow::Wait,
+            ControlFlow::Wait => ControlFlow::Poll,
+            _ => ControlFlow::Wait,
+        };
+
+        event_loop.set_control_flow(new_flow);
+        log::info!(
+            "Control flow changed: {:?} -> {:?}",
+            previous_flow,
+            new_flow
+        );
+    }
+
+    fn exit(&self, event_loop: &winit::event_loop::ActiveEventLoop) {
+        log::info!("Exiting application");
+        event_loop.exit();
+    }
+
+    fn request_redraw(&self) {
+        log::info!("Manual redraw request");
+        match &self.window {
+            Some(window) => {
+                window.request_redraw();
+            }
+            None => {
+                log::error!("Cannot redraw: no window available");
+            }
+        }
+    }
 }
 impl winit::application::ApplicationHandler for App {
     fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
         // TODO: configure the Window with WindowAttributes
         let window_attributes = WindowAttributes::default().with_title("unnamed-engine");
-        self.window = event_loop.create_window(window_attributes).ok();
+        match event_loop.create_window(window_attributes) {
+            Ok(window) => {
+                log::info!("Window created successfully");
+                self.window = Some(window);
+            }
+            Err(e) => {
+                log::error!("Failed to create window: {}", e);
+            }
+        };
     }
 
     fn window_event(
@@ -61,54 +128,8 @@ impl winit::application::ApplicationHandler for App {
                 );
             }
             WindowEvent::CursorMoved { position, .. } => self.state.cursor_position = position,
-            WindowEvent::KeyboardInput {
-                event:
-                    KeyEvent {
-                        physical_key: PhysicalKey::Code(key_code),
-                        state,
-                        ..
-                    },
-                ..
-            } if state.is_pressed() => {
-                // WARNING: we're ignoring state.is_released() cases!
-                // TODO: create a handler for key events if we get more keys
-                log::debug!("KeyboardInput: {:?} {:?}", key_code, state);
-                match key_code {
-                    KeyCode::KeyT => {
-                        if log::log_enabled!(log::Level::Info) {
-                            log::info!("Toggle control flow requested for: {:?}", event_loop);
-                            log::info!(
-                                "Switching from {:?}, new control flow: {:?}",
-                                event_loop.control_flow(),
-                                {
-                                    match event_loop.control_flow() {
-                                        ControlFlow::Poll => {
-                                            event_loop.set_control_flow(ControlFlow::Wait)
-                                        }
-                                        ControlFlow::Wait => {
-                                            event_loop.set_control_flow(ControlFlow::Poll)
-                                        }
-                                        _ => event_loop.set_control_flow(ControlFlow::Wait),
-                                    }
-                                    event_loop.control_flow()
-                                }
-                            )
-                        }
-                    }
-                    KeyCode::Escape | KeyCode::KeyQ => {
-                        log::info!("Exitting {:?}", &self);
-                        event_loop.exit();
-                    }
-                    KeyCode::KeyR => {
-                        log::info!("Manual redraw requested for: {:?}", &self.window);
-                        if let Some(window) = &self.window {
-                            window.request_redraw();
-                        } else {
-                            log::error!("There is no spoon (no window): {:?}", &self.window);
-                        }
-                    }
-                    _ => (),
-                }
+            WindowEvent::KeyboardInput { event, .. } => {
+                self.handle_key_event(event_loop, event);
             }
             _ => (),
         }
