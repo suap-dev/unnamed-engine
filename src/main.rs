@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use wgpu::{
     CommandEncoderDescriptor, Device, Instance, InstanceDescriptor, Queue, RenderPassDescriptor,
     Surface, TextureViewDescriptor,
@@ -8,7 +10,7 @@ use winit::{
     event::{ElementState, KeyEvent, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     keyboard::{KeyCode, PhysicalKey},
-    window::WindowAttributes,
+    window::{Window, WindowAttributes},
 };
 
 mod app;
@@ -29,18 +31,20 @@ struct App {
     surface: Option<Surface<'static>>,
     device: Option<Device>,
     queue: Option<Queue>,
+    window: Option<Arc<Window>>,
     cursor_position: PhysicalPosition<f64>,
 }
 impl ApplicationHandler for App {
     fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
         // WINDOW
         let window_attributes = WindowAttributes::default().with_title("unnamed-engine");
-        let window = event_loop.create_window(window_attributes).unwrap();
+        let window = Arc::new(event_loop.create_window(window_attributes).unwrap());
 
         // SURFACE
         let instance = Instance::new(&InstanceDescriptor::default());
         let window_inner_size = window.inner_size();
-        let surface = instance.create_surface(window).unwrap();
+
+        let surface = instance.create_surface(window.clone()).unwrap();
 
         // ADAPTER
         let request_adapter_options = wgpu::RequestAdapterOptions {
@@ -76,6 +80,7 @@ impl ApplicationHandler for App {
             },
         );
 
+        self.window = Some(window);
         self.surface = Some(surface);
         self.device = Some(device);
         self.queue = Some(queue);
@@ -114,7 +119,7 @@ impl ApplicationHandler for App {
             }
             WindowEvent::CursorMoved { position, .. } => self.cursor_position = position,
             WindowEvent::KeyboardInput { event, .. } => {
-                handle_key_event(event_loop, event);
+                handle_key_event(self.window.as_ref().unwrap().clone(), event_loop, event);
             }
             _ => (),
         }
@@ -149,7 +154,11 @@ fn render(surface: &Surface, device: &Device, queue: &Queue) -> anyhow::Result<(
     Ok(())
 }
 
-fn handle_key_event(event_loop: &winit::event_loop::ActiveEventLoop, key_event: KeyEvent) {
+fn handle_key_event(
+    window: Arc<Window>,
+    event_loop: &winit::event_loop::ActiveEventLoop,
+    key_event: KeyEvent,
+) {
     let KeyEvent {
         physical_key: PhysicalKey::Code(key_code),
         state,
@@ -162,7 +171,7 @@ fn handle_key_event(event_loop: &winit::event_loop::ActiveEventLoop, key_event: 
     log::debug!("KeyboardInput: {key_code:?} {state:?}");
 
     match (key_code, state) {
-        (KeyCode::KeyR, ElementState::Pressed) => request_redraw(),
+        (KeyCode::KeyR, ElementState::Pressed) => request_redraw(window.clone()),
         (KeyCode::KeyT, ElementState::Pressed) => toggle_control_flow(event_loop),
         (KeyCode::Escape, ElementState::Pressed) | (KeyCode::KeyQ, ElementState::Pressed) => {
             exit(event_loop)
@@ -188,8 +197,7 @@ fn exit(event_loop: &winit::event_loop::ActiveEventLoop) {
     event_loop.exit();
 }
 
-fn request_redraw() {
-    // we need to implement this.
-    // the purpose is so that when the control flow is set to ControlFlow::Wait
-    // the user must be able to force redraw using key R
+fn request_redraw(window: Arc<Window>) {
+    log::info!("Manual redraw requested");
+    window.request_redraw();
 }
