@@ -1,3 +1,4 @@
+mod renderer;
 mod state;
 
 use winit::{
@@ -7,12 +8,13 @@ use winit::{
     window::{Window, WindowAttributes},
 };
 
-use crate::app::state::State;
+use crate::app::{renderer::Renderer, state::State};
 
 #[derive(Debug)]
 pub(crate) struct App {
     // TODO: add State
     window: Option<Window>,
+    renderer: Option<Renderer<'static>>,
     state: State,
 }
 impl App {
@@ -21,6 +23,7 @@ impl App {
         let event_loop = EventLoop::new()?;
         let mut app = Self {
             window: None,
+            renderer: None,
             state: State::default(),
         };
         event_loop.set_control_flow(winit::event_loop::ControlFlow::Poll);
@@ -92,6 +95,17 @@ impl winit::application::ApplicationHandler for App {
             Ok(window) => {
                 log::info!("Window created successfully");
                 self.window = Some(window);
+                match Renderer::new(self.window.as_ref().unwrap()) {
+                    Ok(renderer) => {
+                        self.renderer = Some(renderer);
+                        if let Err(err) = self.renderer.as_ref().unwrap().render() {
+                            log::error!("Failed to render: {err}")
+                        };
+                    }
+                    Err(err) => {
+                        log::error!("Renderer not initialised: {err}");
+                    }
+                }
             }
             Err(err) => {
                 log::error!("Failed to create window: {err}");
@@ -107,7 +121,14 @@ impl winit::application::ApplicationHandler for App {
     ) {
         match event {
             WindowEvent::CloseRequested => event_loop.exit(),
-            WindowEvent::RedrawRequested => {}
+            WindowEvent::RedrawRequested => match self.renderer.as_ref() {
+                Some(renderer) => {
+                    if let Err(err) = renderer.render() {
+                        log::error!("Cannot render: {err}");
+                    };
+                }
+                None => log::warn!("Cannot render: no renderer available"),
+            },
             WindowEvent::MouseInput { state, button, .. } => {
                 log::debug!(
                     "MouseInput: {:?} {:?} at {:?}",
