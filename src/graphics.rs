@@ -1,8 +1,10 @@
 use std::sync::Arc;
 
 use wgpu::{
-    Adapter, CommandEncoderDescriptor, Device, Instance, InstanceDescriptor, Queue,
-    RenderPassDescriptor, Surface, SurfaceConfiguration, TextureUsages, TextureViewDescriptor,
+    Adapter, Color, CommandEncoderDescriptor, Device, Instance, InstanceDescriptor, LoadOp,
+    Operations, PowerPreference, Queue, RenderPassColorAttachment, RenderPassDescriptor,
+    RequestAdapterOptions, StoreOp, Surface, SurfaceConfiguration, TextureUsages,
+    TextureViewDescriptor,
 };
 
 pub fn setup(
@@ -13,8 +15,8 @@ pub fn setup(
     let instance = Instance::new(&InstanceDescriptor::default());
     let surface = instance.create_surface(window.clone()).unwrap();
 
-    let request_adapter_options = wgpu::RequestAdapterOptions {
-        power_preference: wgpu::PowerPreference::default(),
+    let request_adapter_options = RequestAdapterOptions {
+        power_preference: PowerPreference::default(),
         force_fallback_adapter: false,
         compatible_surface: Some(&surface),
     };
@@ -78,19 +80,19 @@ pub fn render(surface: &Surface, device: &Device, queue: &Queue) -> anyhow::Resu
     let output = surface.get_current_texture()?;
     let mut encoder = device.create_command_encoder(&CommandEncoderDescriptor::default());
     encoder.begin_render_pass(&RenderPassDescriptor {
-        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+        color_attachments: &[Some(RenderPassColorAttachment {
             view: &output
                 .texture
                 .create_view(&TextureViewDescriptor::default()),
             resolve_target: None,
-            ops: wgpu::Operations {
-                load: wgpu::LoadOp::Clear(wgpu::Color {
+            ops: Operations {
+                load: LoadOp::Clear(Color {
                     r: 0.5,
                     g: 0.5,
                     b: 0.5,
                     a: 0.5,
                 }),
-                store: wgpu::StoreOp::default(),
+                store: StoreOp::default(),
             },
         })],
         ..Default::default()

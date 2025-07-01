@@ -78,13 +78,13 @@ impl ApplicationHandler for App {
                 user_events::handle_key_event(key_event, event_loop, self.window.as_ref().unwrap());
             }
             WindowEvent::RedrawRequested => {
-                log::debug!("Redraw requested"); 
                 graphics::render(
                     self.surface.as_ref().unwrap(),
                     self.device.as_ref().unwrap(),
                     self.queue.as_ref().unwrap(),
                 )
                 .unwrap();
+                self.window.as_ref().unwrap().request_redraw();
             }
             _ => (),
         }
