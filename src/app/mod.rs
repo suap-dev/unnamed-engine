@@ -28,6 +28,7 @@ impl App {
         Ok(())
     }
 
+    // TODO: Separate module for key handler and it's methods?
     fn handle_key_event(
         &self,
         event_loop: &winit::event_loop::ActiveEventLoop,
@@ -42,7 +43,7 @@ impl App {
             return;
         };
 
-        log::debug!("KeyboardInput: {:?} {:?}", key_code, state);
+        log::debug!("KeyboardInput: {key_code:?} {state:?}");
 
         match (key_code, state) {
             (KeyCode::KeyT, ElementState::Pressed) => self.toggle_control_flow(event_loop),
@@ -63,11 +64,7 @@ impl App {
         };
 
         event_loop.set_control_flow(new_flow);
-        log::info!(
-            "Control flow changed: {:?} -> {:?}",
-            previous_flow,
-            new_flow
-        );
+        log::info!("Control flow changed: {previous_flow:?} -> {new_flow:?}");
     }
 
     fn exit(&self, event_loop: &winit::event_loop::ActiveEventLoop) {
@@ -96,8 +93,8 @@ impl winit::application::ApplicationHandler for App {
                 log::info!("Window created successfully");
                 self.window = Some(window);
             }
-            Err(e) => {
-                log::error!("Failed to create window: {}", e);
+            Err(err) => {
+                log::error!("Failed to create window: {err}");
             }
         };
     }
