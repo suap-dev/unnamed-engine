@@ -97,7 +97,7 @@ impl winit::application::ApplicationHandler for App {
                 self.window = Some(window);
                 match Renderer::new(self.window.as_ref().unwrap()) {
                     Ok(renderer) => {
-                        self.renderer = Some(renderer);
+                        // self.renderer = Some(renderer);
                         if let Err(err) = self.renderer.as_ref().unwrap().render() {
                             log::error!("Failed to render: {err}")
                         };
