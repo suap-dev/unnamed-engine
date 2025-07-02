@@ -8,16 +8,14 @@ use winit::{
     window::{Window, WindowAttributes, WindowId},
 };
 
-use crate::{graphics, user_events};
+use crate::{graphics::WgpuContext, user_events};
 
 const WINDOW_TITLE: &str = "unnamed-engine";
 
 #[derive(Default)]
 pub struct App {
-    surface: Option<wgpu::Surface<'static>>,
-    device: Option<wgpu::Device>,
-    queue: Option<wgpu::Queue>,
     window: Option<Arc<Window>>,
+    wgpu_context: WgpuContext,
     cursor_position: PhysicalPosition<f64>,
     clear_color: wgpu::Color,
 }
@@ -45,20 +43,14 @@ impl ApplicationHandler for App {
                 return;
             }
         };
-        let (surface, device, queue) = match graphics::setup(&window) {
-            Ok(val) => val,
-            Err(err) => {
-                log::error!("Unable to set up graphics: {err}");
-                return;
-            }
+
+        if let Err(err) = self.wgpu_context.setup(&window) {
+            log::error!("Unable to set up graphics: {err}");
+            return;
         };
 
         window.request_redraw();
-
         self.window = Some(window);
-        self.surface = Some(surface);
-        self.device = Some(device);
-        self.queue = Some(queue);
     }
 
     fn window_event(
@@ -109,20 +101,14 @@ impl ApplicationHandler for App {
                     self.clear_color.b = blue;
                 }
 
-                if let Err(err) = graphics::render(
-                    self.surface.as_ref().unwrap(),
-                    self.device.as_ref().unwrap(),
-                    self.queue.as_ref().unwrap(),
-                    self.clear_color,
-                ) {
+                if let Err(err) = self.wgpu_context.render(self.clear_color) {
                     log::error!("Unable to render: {err}");
                 }
-                // self.window.as_ref().unwrap().request_redraw();
+                self.window.as_ref().unwrap().request_redraw();
             }
             WindowEvent::Resized(size) => {
-                let (width, height) = (size.width, size.height);
-                
                 log::info!("Window resized");
+                self.wgpu_context.configure_surface(size.width, size.height);
             }
             _ => (),
         }
