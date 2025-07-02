@@ -36,7 +36,6 @@ pub fn handle_key_event(
 }
 
 pub fn exit(event_loop: &winit::event_loop::ActiveEventLoop) {
-    log::info!("Exiting application");
     event_loop.exit();
 }
 

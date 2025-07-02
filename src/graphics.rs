@@ -2,6 +2,8 @@ use std::sync::Arc;
 
 use wgpu::*;
 
+
+
 pub fn setup(
     window: &Arc<winit::window::Window>,
 ) -> anyhow::Result<(Surface<'static>, Device, Queue)> {
@@ -18,7 +20,7 @@ pub fn setup(
     let adapter = pollster::block_on(instance.request_adapter(&request_adapter_options)).unwrap();
 
     let (device, queue) =
-        pollster::block_on(adapter.request_device(&wgpu::wgt::DeviceDescriptor::default()))
+        pollster::block_on(adapter.request_device(&DeviceDescriptor::default()))
             .unwrap();
 
     let surface_size = window.inner_size();

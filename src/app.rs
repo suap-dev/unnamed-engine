@@ -37,6 +37,7 @@ fn create_window(event_loop: &winit::event_loop::ActiveEventLoop) -> anyhow::Res
 }
 impl ApplicationHandler for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
+        log::info!("Application resumed");
         let window = match create_window(event_loop) {
             Ok(window) => window,
             Err(err) => {
@@ -116,9 +117,22 @@ impl ApplicationHandler for App {
                 ) {
                     log::error!("Unable to render: {err}");
                 }
-                self.window.as_ref().unwrap().request_redraw();
+                // self.window.as_ref().unwrap().request_redraw();
+            }
+            WindowEvent::Resized(size) => {
+                let (width, height) = (size.width, size.height);
+                
+                log::info!("Window resized");
             }
             _ => (),
         }
+    }
+
+    fn suspended(&mut self, _event_loop: &ActiveEventLoop) {
+        log::info!("Application suspended");
+    }
+
+    fn exiting(&mut self, _event_loop: &ActiveEventLoop) {
+        log::info!("Application exiting");
     }
 }
