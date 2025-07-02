@@ -37,8 +37,20 @@ fn create_window(event_loop: &winit::event_loop::ActiveEventLoop) -> anyhow::Res
 }
 impl ApplicationHandler for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        let window = create_window(event_loop).unwrap();
-        let (surface, device, queue) = graphics::setup(&window).unwrap();
+        let window = match create_window(event_loop) {
+            Ok(window) => window,
+            Err(err) => {
+                log::error!("Unable to create window: {err}");
+                return;
+            }
+        };
+        let (surface, device, queue) = match graphics::setup(&window) {
+            Ok(val) => val,
+            Err(err) => {
+                log::error!("Unable to set up graphics: {err}");
+                return;
+            }
+        };
 
         window.request_redraw();
 
@@ -96,13 +108,14 @@ impl ApplicationHandler for App {
                     self.clear_color.b = blue;
                 }
 
-                graphics::render(
+                if let Err(err) = graphics::render(
                     self.surface.as_ref().unwrap(),
                     self.device.as_ref().unwrap(),
                     self.queue.as_ref().unwrap(),
                     self.clear_color,
-                )
-                .unwrap();
+                ) {
+                    log::error!("Unable to render: {err}");
+                }
                 self.window.as_ref().unwrap().request_redraw();
             }
             _ => (),
