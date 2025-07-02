@@ -19,6 +19,7 @@ pub struct App {
     queue: Option<wgpu::Queue>,
     window: Option<Arc<Window>>,
     cursor_position: PhysicalPosition<f64>,
+    clear_color: wgpu::Color,
 }
 impl App {
     pub fn run() -> anyhow::Result<()> {
@@ -78,10 +79,28 @@ impl ApplicationHandler for App {
                 user_events::handle_key_event(key_event, event_loop, self.window.as_ref().unwrap());
             }
             WindowEvent::RedrawRequested => {
+                // TODO: delete; funzies
+                {
+                    let (width, height) = {
+                        let surface_size = self.window.as_ref().unwrap().inner_size();
+                        (surface_size.width as f64, surface_size.height as f64)
+                    };
+                    let (x, y) = { (self.cursor_position.x, self.cursor_position.y) };
+
+                    let red = x / width;
+                    let green = (1.0 - (x / width + y / height)).clamp(0.0, 1.0);
+                    let blue = y / height;
+
+                    self.clear_color.r = red;
+                    self.clear_color.g = green;
+                    self.clear_color.b = blue;
+                }
+
                 graphics::render(
                     self.surface.as_ref().unwrap(),
                     self.device.as_ref().unwrap(),
                     self.queue.as_ref().unwrap(),
+                    self.clear_color,
                 )
                 .unwrap();
                 self.window.as_ref().unwrap().request_redraw();

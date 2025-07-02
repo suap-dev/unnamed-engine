@@ -1,11 +1,6 @@
 use std::sync::Arc;
 
-use wgpu::{
-    Adapter, Color, CommandEncoderDescriptor, Device, Instance, InstanceDescriptor, LoadOp,
-    Operations, PowerPreference, Queue, RenderPassColorAttachment, RenderPassDescriptor,
-    RequestAdapterOptions, StoreOp, Surface, SurfaceConfiguration, TextureUsages,
-    TextureViewDescriptor,
-};
+use wgpu::*;
 
 pub fn setup(
     window: &Arc<winit::window::Window>,
@@ -74,8 +69,13 @@ pub fn configure_surface(
     );
 }
 
-pub fn render(surface: &Surface, device: &Device, queue: &Queue) -> anyhow::Result<()> {
-    log::debug!("Rendering");
+pub fn render(
+    surface: &Surface,
+    device: &Device,
+    queue: &Queue,
+    clear_color: Color,
+) -> anyhow::Result<()> {
+    // log::debug!("Rendering");
 
     let output = surface.get_current_texture()?;
     let mut encoder = device.create_command_encoder(&CommandEncoderDescriptor::default());
@@ -86,12 +86,7 @@ pub fn render(surface: &Surface, device: &Device, queue: &Queue) -> anyhow::Resu
                 .create_view(&TextureViewDescriptor::default()),
             resolve_target: None,
             ops: Operations {
-                load: LoadOp::Clear(Color {
-                    r: 0.5,
-                    g: 0.5,
-                    b: 0.5,
-                    a: 0.5,
-                }),
+                load: LoadOp::Clear(clear_color),
                 store: StoreOp::default(),
             },
         })],
