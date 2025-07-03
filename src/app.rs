@@ -18,6 +18,7 @@ pub struct App {
     wgpu_context: WgpuContext,
     cursor_position: PhysicalPosition<f64>,
     clear_color: wgpu::Color,
+    rendering_active: bool,
 }
 impl App {
     pub fn run() -> anyhow::Result<()> {
@@ -43,7 +44,7 @@ fn create_window(event_loop: &winit::event_loop::ActiveEventLoop) -> anyhow::Res
 }
 impl ApplicationHandler for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        log::info!("Application resumed");
+        log::debug!("Application resumed");
         let window = match create_window(event_loop) {
             Ok(window) => window,
             Err(err) => {
@@ -67,6 +68,7 @@ impl ApplicationHandler for App {
         _window_id: WindowId,
         event: WindowEvent,
     ) {
+        let window = self.window.as_ref().unwrap();
         match event {
             WindowEvent::CloseRequested => user_events::exit(event_loop),
             WindowEvent::CursorMoved { position, .. } => self.cursor_position = position,
@@ -89,13 +91,13 @@ impl ApplicationHandler for App {
             WindowEvent::KeyboardInput {
                 event: key_event, ..
             } => {
-                user_events::handle_key_event(key_event, event_loop, self.window.as_ref().unwrap());
+                user_events::handle_key_event(key_event, event_loop, window);
             }
             WindowEvent::RedrawRequested => {
                 // TODO: delete; funzies
                 {
                     let (width, height) = {
-                        let surface_size = self.window.as_ref().unwrap().inner_size();
+                        let surface_size = window.inner_size();
                         (surface_size.width as f64, surface_size.height as f64)
                     };
                     let (x, y) = { (self.cursor_position.x, self.cursor_position.y) };
@@ -112,21 +114,42 @@ impl ApplicationHandler for App {
                 if let Err(err) = self.wgpu_context.render(self.clear_color) {
                     log::error!("Unable to render: {err}");
                 }
-                self.window.as_ref().unwrap().request_redraw();
+                if self.rendering_active {
+                    window.request_redraw()
+                };
             }
             WindowEvent::Resized(size) => {
-                log::info!("Window resized");
-                self.wgpu_context.resize_surface(size.width, size.height);
+                if log::log_enabled!(log::Level::Debug) {
+                    let current_surface_size = self.wgpu_context.get_surface_size();
+                    log::debug!(
+                        "Resizing window. Current surface size: {{w: {}, h: {}}}, requested size: {{w: {}, h: {}}}",
+                        current_surface_size.width,
+                        current_surface_size.height,
+                        size.width,
+                        size.height
+                    );
+                }
+                match self.wgpu_context.resize_surface(size.width, size.height) {
+                    Ok(_) => {
+                        self.rendering_active = true;
+                        log::debug!("Window resized");
+                    }
+                    Err(err) => {
+                        // TODO: be aware that rendering stops when we minimise the window
+                        self.rendering_active = false;
+                        log::warn!("{err}");
+                    }
+                };
             }
-            _ => (),
+            _ => {}
         }
     }
 
     fn suspended(&mut self, _event_loop: &ActiveEventLoop) {
-        log::info!("Application suspended");
+        log::debug!("Application suspended");
     }
 
     fn exiting(&mut self, _event_loop: &ActiveEventLoop) {
-        log::info!("Application exiting");
+        log::debug!("Application exiting");
     }
 }

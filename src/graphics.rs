@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use wgpu::*;
+use winit::dpi::PhysicalSize;
 
 #[derive(Default)]
 pub struct WgpuContext {
@@ -134,13 +135,23 @@ impl WgpuContext {
         }));
     }
 
+    pub fn get_surface_size(&self) -> PhysicalSize<u32> {
+        let config = self.config.as_ref().unwrap();
+        PhysicalSize {
+            width: config.width,
+            height: config.height,
+        }
+    }
+
     // TODO: can assume that all the struct fields are already initialised?
-    pub fn resize_surface(&mut self, width: u32, height: u32) {
+    pub fn resize_surface(&mut self, width: u32, height: u32) -> anyhow::Result<()> {
         log::debug!("Resizing surface");
 
         // exit early if minimised
         if width == 0 || height == 0 {
-            return;
+            anyhow::bail!(
+                "Invalid size, dimensions have to be nonzero. {{w: {width}, h: {height}}}"
+            );
         }
 
         let surface = self.surface.as_ref().unwrap();
@@ -151,6 +162,7 @@ impl WgpuContext {
         config.height = height;
 
         surface.configure(device, config);
+        Ok(())
     }
 
     pub fn render(&self, clear_color: Color) -> anyhow::Result<()> {
