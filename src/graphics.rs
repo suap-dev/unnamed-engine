@@ -13,126 +13,21 @@ pub struct WgpuContext {
     queue: Option<Queue>,
     pipeline: Option<RenderPipeline>,
 }
+
 impl WgpuContext {
     pub fn setup(&mut self, window: &Arc<winit::window::Window>) -> anyhow::Result<()> {
         log::debug!("Setting up wgpu");
 
-        let instance = {
-            if self.instance.is_none() {
-                self.instance = Some(Instance::new(&InstanceDescriptor::default()))
-            }
-            self.instance.as_ref().unwrap()
-        };
+        self.ensure_instance();
+        self.ensure_surface(window)?;
+        self.ensure_adapter()?;
+        self.ensure_device()?;
+        self.ensure_config(window.inner_size());
+        self.ensure_pipeline();
 
-        let surface = {
-            if self.surface.is_none() {
-                self.surface = Some(instance.create_surface(window.clone())?);
-            }
-            self.surface.as_ref().unwrap()
-        };
-
-        let adapter = {
-            if self.adapter.is_none() {
-                self.adapter = Some(pollster::block_on(instance.request_adapter(
-                    &RequestAdapterOptions {
-                        power_preference: PowerPreference::default(),
-                        force_fallback_adapter: false,
-                        compatible_surface: Some(surface),
-                    },
-                ))?);
-            }
-            self.adapter.as_ref().unwrap()
-        };
-
-        let device = {
-            if self.device.is_none() || self.queue.is_none() {
-                let (device, queue) = pollster::block_on(
-                    self.adapter
-                        .as_ref()
-                        .unwrap()
-                        .request_device(&DeviceDescriptor::default()),
-                )?;
-                self.device = Some(device);
-                self.queue = Some(queue);
-            }
-            self.device.as_ref().unwrap()
-        };
-
-        let config = {
-            if self.config.is_none() {
-                let surface_size = window.inner_size();
-                let surface_capabilities = surface.get_capabilities(adapter);
-                self.config = Some(SurfaceConfiguration {
-                    usage: TextureUsages::RENDER_ATTACHMENT,
-                    format: *surface_capabilities
-                        .formats
-                        .iter()
-                        .find(|format| format.is_srgb())
-                        .unwrap(),
-                    width: surface_size.width,
-                    height: surface_size.height,
-                    present_mode: surface_capabilities.present_modes[0],
-                    desired_maximum_frame_latency: 2,
-                    alpha_mode: surface_capabilities.alpha_modes[0],
-                    view_formats: vec![],
-                });
-            }
-            self.config.as_ref().unwrap()
-        };
-
-        surface.configure(device, config);
-
-        self.create_render_pipeline();
+        self.configure_surface();
 
         Ok(())
-    }
-
-    fn create_render_pipeline(&mut self) {
-        let device = self.device.as_ref().unwrap();
-        let config = self.config.as_ref().unwrap();
-
-        let shader_module = device.create_shader_module(ShaderModuleDescriptor {
-            label: None,
-            source: ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
-        });
-
-        let vertex_state = VertexState {
-            module: &shader_module,
-            entry_point: Some("vs_main"),
-            compilation_options: PipelineCompilationOptions::default(),
-            buffers: &[],
-        };
-
-        let color_target_state = ColorTargetState {
-            format: config.format,
-            blend: None,
-            write_mask: ColorWrites::ALL,
-        };
-
-        let fragment_state = FragmentState {
-            module: &shader_module,
-            entry_point: Some("fs_main"),
-            compilation_options: PipelineCompilationOptions::default(),
-            targets: &[Some(color_target_state)],
-        };
-
-        let layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
-            label: Some("Pipeline Layout #0"),
-            bind_group_layouts: &[],
-            push_constant_ranges: &[],
-        });
-
-        self.pipeline = Some(device.create_render_pipeline(&RenderPipelineDescriptor {
-            label: Some("Render Pipeline #0"),
-            layout: Some(&layout),
-            vertex: vertex_state,
-            primitive: PrimitiveState::default(),
-            depth_stencil: None,
-            multisample: MultisampleState::default(),
-            fragment: Some(fragment_state),
-            multiview: None,
-            cache: None,
-        }));
     }
 
     pub fn get_surface_size(&self) -> PhysicalSize<u32> {
@@ -147,7 +42,6 @@ impl WgpuContext {
     pub fn resize_surface(&mut self, width: u32, height: u32) -> anyhow::Result<()> {
         log::debug!("Resizing surface");
 
-        // exit early if minimised
         if width == 0 || height == 0 {
             anyhow::bail!(
                 "Invalid size, dimensions have to be nonzero. {{w: {width}, h: {height}}}"
@@ -196,5 +90,132 @@ impl WgpuContext {
         output.present();
 
         Ok(())
+    }
+
+    // private
+    fn ensure_instance(&mut self) {
+        if self.instance.is_none() {
+            self.instance = Some(Instance::new(&InstanceDescriptor::default()))
+        }
+    }
+
+    fn ensure_surface(&mut self, window: &Arc<winit::window::Window>) -> anyhow::Result<()> {
+        if self.surface.is_none() {
+            let instance = self.instance.as_ref().unwrap();
+
+            self.surface = Some(instance.create_surface(window.clone())?);
+        }
+        Ok(())
+    }
+
+    fn ensure_adapter(&mut self) -> anyhow::Result<()> {
+        if self.adapter.is_none() {
+            let instance = self.instance.as_ref().unwrap();
+            let surface = self.surface.as_ref().unwrap();
+
+            self.adapter = Some(pollster::block_on(instance.request_adapter(
+                &RequestAdapterOptions {
+                    power_preference: PowerPreference::default(),
+                    force_fallback_adapter: false,
+                    compatible_surface: Some(surface),
+                },
+            ))?);
+        }
+        Ok(())
+    }
+
+    fn ensure_device(&mut self) -> anyhow::Result<()> {
+        if self.device.is_none() || self.queue.is_none() {
+            let adapter = self.adapter.as_ref().unwrap();
+            let (device, queue) =
+                pollster::block_on(adapter.request_device(&DeviceDescriptor::default()))?;
+
+            self.device = Some(device);
+            self.queue = Some(queue);
+        }
+        Ok(())
+    }
+
+    fn ensure_config(&mut self, surface_size: PhysicalSize<u32>) {
+        if self.config.is_none() {
+            let surface = self.surface.as_ref().unwrap();
+            let adapter = self.adapter.as_ref().unwrap();
+            let surface_capabilities = surface.get_capabilities(adapter);
+
+            self.config = Some(SurfaceConfiguration {
+                usage: TextureUsages::RENDER_ATTACHMENT,
+                format: *surface_capabilities
+                    .formats
+                    .iter()
+                    .find(|format| format.is_srgb())
+                    .unwrap(),
+                width: surface_size.width,
+                height: surface_size.height,
+                present_mode: surface_capabilities.present_modes[0],
+                desired_maximum_frame_latency: 2,
+                alpha_mode: surface_capabilities.alpha_modes[0],
+                view_formats: vec![],
+            });
+        }
+    }
+
+    fn configure_surface(&mut self) {
+        let device = self.device.as_ref().unwrap();
+        let config = self.config.as_ref().unwrap();
+        let surface = self.surface.as_ref().unwrap();
+
+        surface.configure(device, config);
+    }
+
+    fn ensure_pipeline(&mut self) {
+        self.pipeline = Some(self.create_render_pipeline());
+    }
+
+    fn create_render_pipeline(&mut self) -> RenderPipeline {
+        let device = self.device.as_ref().unwrap();
+        let config = self.config.as_ref().unwrap();
+
+        let shader_module = device.create_shader_module(ShaderModuleDescriptor {
+            label: None,
+            source: ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
+        });
+
+        let vertex_state = VertexState {
+            module: &shader_module,
+            entry_point: Some("vs_main"),
+            compilation_options: PipelineCompilationOptions::default(),
+            buffers: &[],
+        };
+
+        let color_target_state = ColorTargetState {
+            format: config.format,
+            blend: None,
+            write_mask: ColorWrites::ALL,
+        };
+
+        let fragment_state = FragmentState {
+            module: &shader_module,
+            entry_point: Some("fs_main"),
+            compilation_options: PipelineCompilationOptions::default(),
+            targets: &[Some(color_target_state)],
+        };
+
+        let layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
+            label: Some("Pipeline Layout #0"),
+            bind_group_layouts: &[],
+            push_constant_ranges: &[],
+        });
+
+        device.create_render_pipeline(&RenderPipelineDescriptor {
+            label: Some("Render Pipeline #0"),
+            layout: Some(&layout),
+            vertex: vertex_state,
+            primitive: PrimitiveState::default(),
+            depth_stencil: None,
+            multisample: MultisampleState::default(),
+            fragment: Some(fragment_state),
+            multiview: None,
+            cache: None,
+        })
     }
 }
