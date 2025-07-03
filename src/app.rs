@@ -108,7 +108,7 @@ impl ApplicationHandler for App {
             }
             WindowEvent::Resized(size) => {
                 log::info!("Window resized");
-                self.wgpu_context.configure_surface(size.width, size.height);
+                self.wgpu_context.resize_surface(size.width, size.height);
             }
             _ => (),
         }
