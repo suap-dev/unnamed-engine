@@ -176,7 +176,7 @@ impl WgpuContext {
         let config = self.config.as_ref().unwrap();
 
         let shader_module = device.create_shader_module(ShaderModuleDescriptor {
-            label: None,
+            label: Some("Shader #0"),
             source: ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
         });
 
