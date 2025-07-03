@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use winit::{
     application::ApplicationHandler,
-    dpi::PhysicalPosition,
+    dpi::{PhysicalPosition, PhysicalSize},
     event::WindowEvent,
     event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
     window::{Window, WindowAttributes, WindowId},
@@ -29,9 +29,17 @@ impl App {
     }
 }
 fn create_window(event_loop: &winit::event_loop::ActiveEventLoop) -> anyhow::Result<Arc<Window>> {
-    Ok(Arc::new(event_loop.create_window(
-        WindowAttributes::default().with_title(WINDOW_TITLE),
-    )?))
+    Ok(Arc::new(
+        event_loop.create_window(
+            WindowAttributes::default()
+                .with_title(WINDOW_TITLE)
+                .with_inner_size(PhysicalSize {
+                    width: 1280,
+                    height: 720,
+                })
+                .with_resizable(false),
+        )?,
+    ))
 }
 impl ApplicationHandler for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
