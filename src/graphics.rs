@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use wgpu::{wgc::device, *};
+use wgpu::*;
 
 #[derive(Default)]
 pub struct WgpuContext {
@@ -10,6 +10,7 @@ pub struct WgpuContext {
     device: Option<Device>,
     adapter: Option<Adapter>,
     queue: Option<Queue>,
+    pipeline: Option<RenderPipeline>,
 }
 impl WgpuContext {
     pub fn setup(&mut self, window: &Arc<winit::window::Window>) -> anyhow::Result<()> {
@@ -80,7 +81,57 @@ impl WgpuContext {
 
         surface.configure(device, config);
 
+        self.create_render_pipeline();
+
         Ok(())
+    }
+
+    fn create_render_pipeline(&mut self) {
+        let device = self.device.as_ref().unwrap();
+        let config = self.config.as_ref().unwrap();
+
+        let shader_module = device.create_shader_module(ShaderModuleDescriptor {
+            label: None,
+            source: ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
+        });
+
+        let vertex_state = VertexState {
+            module: &shader_module,
+            entry_point: Some("vs_main"),
+            compilation_options: PipelineCompilationOptions::default(),
+            buffers: &[],
+        };
+
+        let color_target_state = ColorTargetState {
+            format: config.format,
+            blend: None,
+            write_mask: ColorWrites::ALL,
+        };
+
+        let fragment_state = FragmentState {
+            module: &shader_module,
+            entry_point: Some("fs_main"),
+            compilation_options: PipelineCompilationOptions::default(),
+            targets: &[Some(color_target_state)],
+        };
+
+        let layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
+            label: Some("Pipeline Layout #0"),
+            bind_group_layouts: &[],
+            push_constant_ranges: &[],
+        });
+
+        self.pipeline = Some(device.create_render_pipeline(&RenderPipelineDescriptor {
+            label: Some("Render Pipeline #0"),
+            layout: Some(&layout),
+            vertex: vertex_state,
+            primitive: PrimitiveState::default(),
+            depth_stencil: None,
+            multisample: MultisampleState::default(),
+            fragment: Some(fragment_state),
+            multiview: None,
+            cache: None,
+        }));
     }
 
     // TODO: can assume that all the struct fields are already initialised?
@@ -110,7 +161,7 @@ impl WgpuContext {
 
         let mut encoder = device.create_command_encoder(&CommandEncoderDescriptor::default());
         {
-            let _render_pass = encoder.begin_render_pass(&RenderPassDescriptor {
+            let mut render_pass = encoder.begin_render_pass(&RenderPassDescriptor {
                 color_attachments: &[Some(RenderPassColorAttachment {
                     view: &output
                         .texture
@@ -123,6 +174,9 @@ impl WgpuContext {
                 })],
                 ..Default::default()
             });
+            let pipeline = self.pipeline.as_ref().unwrap();
+            render_pass.set_pipeline(pipeline);
+            render_pass.draw(0..3, 0..1);
         }
 
         let queue = self.queue.as_ref().unwrap();
