@@ -1,4 +1,7 @@
-use std::sync::Arc;
+use std::{
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use winit::{
     application::ApplicationHandler,
@@ -8,7 +11,10 @@ use winit::{
     window::{Window, WindowAttributes, WindowId},
 };
 
-use crate::{graphics::WgpuContext, user_events};
+use crate::{
+    graphics::{WgpuContext, uniforms},
+    user_events,
+};
 
 const WINDOW_TITLE: &str = "unnamed-engine";
 
@@ -19,6 +25,7 @@ pub struct App {
     cursor_position: PhysicalPosition<f64>,
     clear_color: wgpu::Color,
     rendering_active: bool,
+    timer: Option<Instant>,
 }
 impl App {
     pub fn run() -> anyhow::Result<()> {
@@ -45,6 +52,10 @@ fn create_window(event_loop: &winit::event_loop::ActiveEventLoop) -> anyhow::Res
 impl ApplicationHandler for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         log::debug!("Application resumed");
+        if self.timer.is_none() {
+            self.timer = Some(Instant::now());
+        }
+
         let window = match create_window(event_loop) {
             Ok(window) => window,
             Err(err) => {
@@ -111,6 +122,11 @@ impl ApplicationHandler for App {
                     self.clear_color.b = blue;
                 }
 
+                self.wgpu_context
+                    .update_stuff_uniform(&uniforms::Stuff::new(
+                        window.inner_size(),
+                        self.timer.as_ref().unwrap().elapsed().as_secs_f32(),
+                    ));
                 if let Err(err) = self.wgpu_context.render(self.clear_color) {
                     log::error!("Unable to render: {err}");
                 }

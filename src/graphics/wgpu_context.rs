@@ -1,7 +1,9 @@
-use std::sync::Arc;
+use std::{num::NonZero, sync::Arc};
 
-use wgpu::*;
+use wgpu::{wgc::device, *};
 use winit::dpi::PhysicalSize;
+
+use crate::graphics::uniforms::Stuff;
 
 #[derive(Default)]
 pub struct WgpuContext {
@@ -12,6 +14,9 @@ pub struct WgpuContext {
     adapter: Option<Adapter>,
     queue: Option<Queue>,
     pipeline: Option<RenderPipeline>,
+    bind_group_layout: Option<BindGroupLayout>,
+    uniform_buffer: Option<Buffer>,
+    bind_group: Option<BindGroup>,
 }
 
 impl WgpuContext {
@@ -23,6 +28,7 @@ impl WgpuContext {
         self.ensure_adapter()?;
         self.ensure_device()?;
         self.ensure_config(window.inner_size());
+        self.ensure_stuff_bind_group_layout();
         self.ensure_pipeline();
 
         self.configure_surface();
@@ -82,6 +88,9 @@ impl WgpuContext {
             });
             let pipeline = self.pipeline.as_ref().unwrap();
             render_pass.set_pipeline(pipeline);
+            if let Some(bind_group) = &self.bind_group {
+                render_pass.set_bind_group(0, bind_group, &[]);
+            }
             render_pass.draw(0..3, 0..1);
         }
 
@@ -90,6 +99,36 @@ impl WgpuContext {
         output.present();
 
         Ok(())
+    }
+
+    pub fn update_stuff_uniform(&mut self, data: &Stuff) {
+        let device = self.device.as_ref().unwrap();
+        let queue = self.queue.as_ref().unwrap();
+        let bind_group_layout = self.bind_group_layout.as_ref().unwrap();
+
+        // ensure uniform buffer?
+        if self.uniform_buffer.is_none() {
+            self.uniform_buffer = Some(device.create_buffer(&BufferDescriptor {
+                label: Some("Stuff Uniform Buffer"),
+                size: 16,
+                usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            }));
+
+            let uniform_buffer = self.uniform_buffer.as_ref().unwrap();
+            let stuff_entry = BindGroupEntry {
+                binding: 0,
+                resource: uniform_buffer.as_entire_binding(),
+            };
+            self.bind_group = Some(device.create_bind_group(&BindGroupDescriptor {
+                label: Some("Stuff Uniform Bind Group"),
+                layout: bind_group_layout,
+                entries: &[stuff_entry],
+            }));
+        }
+
+        let uniform_buffer = self.uniform_buffer.as_ref().unwrap();
+        queue.write_buffer(uniform_buffer, 0, bytemuck::cast_slice(&[*data]));
     }
 
     // private
@@ -159,6 +198,28 @@ impl WgpuContext {
         }
     }
 
+    fn ensure_stuff_bind_group_layout(&mut self) {
+        let device = self.device.as_ref().unwrap();
+
+        let bind_group_layout_0_entry_0 = BindGroupLayoutEntry {
+            binding: 0,
+            visibility: ShaderStages::VERTEX,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Uniform,
+                has_dynamic_offset: false,
+                min_binding_size: Some(NonZero::new(16).unwrap()), // we KNOW the size of Stuff
+            },
+            count: None, // only applies to arrays of elements in buffers
+        };
+
+        let bind_group_layout_0 = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+            label: Some("Uniform Bind Group Layout #0"),
+            entries: &[bind_group_layout_0_entry_0],
+        });
+
+        self.bind_group_layout = Some(bind_group_layout_0);
+    }
+
     fn configure_surface(&mut self) {
         let device = self.device.as_ref().unwrap();
         let config = self.config.as_ref().unwrap();
@@ -174,6 +235,7 @@ impl WgpuContext {
     fn create_render_pipeline(&mut self) -> RenderPipeline {
         let device = self.device.as_ref().unwrap();
         let config = self.config.as_ref().unwrap();
+        let bind_group_layout = self.bind_group_layout.as_ref().unwrap();
 
         let shader_module = device.create_shader_module(ShaderModuleDescriptor {
             label: Some("Shader #0"),
@@ -200,15 +262,15 @@ impl WgpuContext {
             targets: &[Some(color_target_state)],
         };
 
-        let layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
+        let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
             label: Some("Pipeline Layout #0"),
-            bind_group_layouts: &[],
+            bind_group_layouts: &[bind_group_layout],
             push_constant_ranges: &[],
         });
 
         device.create_render_pipeline(&RenderPipelineDescriptor {
             label: Some("Render Pipeline #0"),
-            layout: Some(&layout),
+            layout: Some(&pipeline_layout),
             vertex: vertex_state,
             primitive: PrimitiveState::default(),
             depth_stencil: None,
