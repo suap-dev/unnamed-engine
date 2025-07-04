@@ -24,11 +24,10 @@ impl WgpuContext {
         let adapter = request_adapter(instance, &surface)?;
         let (device, queue) = request_device(&adapter)?;
         let surface_config = create_surface_config(window, &surface, adapter);
-
         let uniform_buffer = create_uniform_buffer(&device);
-
         let stuff_bind_group_layout = create_bind_group_layout(&device);
-        let stuff_bind_group = create_bind_group(&device, &uniform_buffer);
+        let stuff_bind_group =
+            create_bind_group(&device, &uniform_buffer, &stuff_bind_group_layout);
 
         let pipeline = create_render_pipeline(&device, &surface_config, &stuff_bind_group_layout);
 
@@ -111,11 +110,9 @@ impl WgpuContext {
 
 fn create_bind_group(
     device: &Device,
-    // bind_group_layout: &BindGroupLayout,
     uniform_buffer: &Buffer,
+    bind_group_layout: &BindGroupLayout,
 ) -> BindGroup {
-    let bind_group_layout = create_bind_group_layout(device);
-
     let stuff_entry = BindGroupEntry {
         binding: 0,
         resource: uniform_buffer.as_entire_binding(),
@@ -123,7 +120,7 @@ fn create_bind_group(
 
     device.create_bind_group(&BindGroupDescriptor {
         label: Some("Stuff Uniform Bind Group"),
-        layout: &bind_group_layout,
+        layout: bind_group_layout,
         entries: &[stuff_entry],
     })
 }
@@ -211,7 +208,6 @@ fn create_render_pipeline(
     let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
         label: Some("Pipeline Layout #0"),
         bind_group_layouts: &[bind_group_layout],
-        // bind_group_layouts: &[],
         push_constant_ranges: &[],
     });
 
