@@ -1,6 +1,6 @@
 use std::{num::NonZero, sync::Arc};
 
-use wgpu::{wgc::device, *};
+use wgpu::*;
 use winit::dpi::PhysicalSize;
 
 use crate::graphics::uniforms::Stuff;
@@ -190,9 +190,9 @@ impl WgpuContext {
                     .unwrap(),
                 width: surface_size.width,
                 height: surface_size.height,
-                present_mode: surface_capabilities.present_modes[0],
+                present_mode: PresentMode::AutoVsync,
                 desired_maximum_frame_latency: 2,
-                alpha_mode: surface_capabilities.alpha_modes[0],
+                alpha_mode: CompositeAlphaMode::Auto,
                 view_formats: vec![],
             });
         }
