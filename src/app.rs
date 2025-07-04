@@ -18,7 +18,7 @@ const WINDOW_TITLE: &str = "unnamed-engine";
 #[derive(Default)]
 pub struct App {
     window: Option<Arc<Window>>,
-    wgpu_context: WgpuContext,
+    wgpu_context: Option<WgpuContext>,
     cursor_position: PhysicalPosition<f64>,
     clear_color: wgpu::Color,
     rendering_active: bool,
@@ -33,7 +33,7 @@ impl App {
         Ok(())
     }
 }
-fn create_window(event_loop: &winit::event_loop::ActiveEventLoop) -> anyhow::Result<Arc<Window>> {
+fn create_window(event_loop: &ActiveEventLoop) -> anyhow::Result<Arc<Window>> {
     Ok(Arc::new(
         event_loop.create_window(
             WindowAttributes::default()
@@ -61,10 +61,12 @@ impl ApplicationHandler for App {
             }
         };
 
-        if let Err(err) = self.wgpu_context.setup(&window) {
-            log::error!("Unable to set up graphics: {err}");
-            return;
-        };
+        if self.wgpu_context.is_none() {
+            match WgpuContext::setup(&window) {
+                Ok(wgpu_context) => self.wgpu_context = Some(wgpu_context),
+                Err(err) => log::error!("Unable to set up graphics: {err}"),
+            }
+        }
 
         window.request_redraw();
         self.window = Some(window);
@@ -76,7 +78,6 @@ impl ApplicationHandler for App {
         _window_id: WindowId,
         event: WindowEvent,
     ) {
-        let window = self.window.as_ref().unwrap();
         match event {
             WindowEvent::CloseRequested => user_events::exit(event_loop),
             WindowEvent::CursorMoved { position, .. } => self.cursor_position = position,
@@ -99,15 +100,16 @@ impl ApplicationHandler for App {
             WindowEvent::KeyboardInput {
                 event: key_event, ..
             } => {
+                let window = self.window.as_ref().unwrap();
                 user_events::handle_key_event(key_event, event_loop, window);
             }
             WindowEvent::RedrawRequested => {
+                let window = self.window.as_ref().unwrap();
+                let surface_size = window.inner_size();
                 // TODO: delete; funzies
                 {
-                    let (width, height) = {
-                        let surface_size = window.inner_size();
-                        (surface_size.width as f64, surface_size.height as f64)
-                    };
+                    let (width, height) =
+                        { (surface_size.width as f64, surface_size.height as f64) };
                     let (x, y) = { (self.cursor_position.x, self.cursor_position.y) };
 
                     let red = x / width;
@@ -119,12 +121,12 @@ impl ApplicationHandler for App {
                     self.clear_color.b = blue;
                 }
 
-                self.wgpu_context
-                    .update_stuff_uniform(&uniforms::Stuff::new(
-                        window.inner_size(),
-                        self.timer.as_ref().unwrap().elapsed().as_secs_f32(),
-                    ));
-                if let Err(err) = self.wgpu_context.render(self.clear_color) {
+                let wgpu_context = self.wgpu_context.as_mut().unwrap();
+                wgpu_context.update_stuff_uniform(&uniforms::Stuff::new(
+                    surface_size,
+                    self.timer.as_ref().unwrap().elapsed().as_secs_f32(),
+                ));
+                if let Err(err) = wgpu_context.render(self.clear_color) {
                     log::error!("Unable to render: {err}");
                 }
                 if self.rendering_active {
@@ -132,8 +134,9 @@ impl ApplicationHandler for App {
                 };
             }
             WindowEvent::Resized(size) => {
+                let wgpu_context = self.wgpu_context.as_mut().unwrap();
                 if log::log_enabled!(log::Level::Debug) {
-                    let current_surface_size = self.wgpu_context.get_surface_size();
+                    let current_surface_size = wgpu_context.get_surface_size();
                     log::debug!(
                         "Resizing window. Current surface size: {{w: {}, h: {}}}, requested size: {{w: {}, h: {}}}",
                         current_surface_size.width,
@@ -142,7 +145,7 @@ impl ApplicationHandler for App {
                         size.height
                     );
                 }
-                match self.wgpu_context.resize_surface(size.width, size.height) {
+                match wgpu_context.resize_surface(size.width, size.height) {
                     Ok(_) => {
                         self.rendering_active = true;
                         log::debug!("Window resized");
