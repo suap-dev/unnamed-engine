@@ -10,9 +10,10 @@ impl Vertex {
     pub fn new(position: [f32; 2], color: [f32; 3]) -> Self {
         Self { position, color }
     }
-    // pub fn pos(position: [f32; 2]) -> Self {
-    //     Self::new(position, [1.0, 1.0, 1.0])
-    // }
+
+    pub fn pos(position: [f32; 2]) -> Self {
+        Self::new(position, [1.0, 1.0, 1.0])
+    }
 
     const ATTRIBUTES: &[VertexAttribute] = &vertex_attr_array![0 => Float32x2, 1 => Float32x3];
     #[must_use]

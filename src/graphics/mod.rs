@@ -1,4 +1,5 @@
 mod buffers;
+mod math;
 mod mesh;
 mod pipeline;
 mod primitives;

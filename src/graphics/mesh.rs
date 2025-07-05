@@ -1,5 +1,3 @@
-use std::f64::consts::TAU;
-
 use crate::graphics::vertrex::Vertex;
 
 pub struct Mesh {
