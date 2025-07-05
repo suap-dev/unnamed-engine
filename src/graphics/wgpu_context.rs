@@ -12,11 +12,16 @@ pub struct WgpuContext {
     queue: Queue,
     pipeline: RenderPipeline,
     bind_group: BindGroup,
+    // TODO: clean up the buffers initialisations; what should and what shouldn't be in wgpu context?
     uniform_buffer: Buffer,
     vertex_buffer: Buffer,
     index_buffer: Buffer,
     index_count: u32,
 }
+
+const N_GON_VERTICES: u16 = 8;
+const N_GON_CIRCUMRADIUS: f32 = 0.66;
+const N_GON_COLOR: Color = Color::RED;
 
 impl WgpuContext {
     pub fn setup(window: &Arc<winit::window::Window>) -> anyhow::Result<Self> {
@@ -32,17 +37,18 @@ impl WgpuContext {
         let stuff_bind_group =
             create_bind_group(&device, &uniform_buffer, &stuff_bind_group_layout);
 
-        let vertices = vertices::get_vertices();
-        let vertex_buffer = buffers::create_vertex_buffer(&device, &vertices);
-
-        let indices = vertices::get_indices();
-        let index_buffer = buffers::create_index_buffer(&device, &indices);
-
-        let index_count = indices.len() as u32;
-
         let pipeline = create_render_pipeline(&device, &surface_config, &stuff_bind_group_layout);
 
         surface.configure(&device, &surface_config);
+
+        // TODO: remove hardcodded test-buffers
+        let vertices = vertices::n_gon_vertices(N_GON_VERTICES, N_GON_CIRCUMRADIUS, N_GON_COLOR);
+        let vertex_buffer = buffers::create_vertex_buffer(&device, &vertices);
+
+        let indices = vertices::n_gon_indices(N_GON_VERTICES);
+        let index_buffer = buffers::create_index_buffer(&device, &indices);
+
+        let index_count = indices.len() as u32;
 
         Ok(Self {
             surface_config,
