@@ -3,7 +3,7 @@ use std::{num::NonZero, sync::Arc};
 use wgpu::*;
 use winit::dpi::PhysicalSize;
 
-use crate::graphics::uniforms::Stuff;
+use crate::graphics::{buffers, uniforms::Stuff, vertices};
 
 pub struct WgpuContext {
     surface_config: SurfaceConfiguration,
@@ -13,6 +13,9 @@ pub struct WgpuContext {
     pipeline: RenderPipeline,
     bind_group: BindGroup,
     uniform_buffer: Buffer,
+    vertex_buffer: Buffer,
+    index_buffer: Buffer,
+    index_count: u32,
 }
 
 impl WgpuContext {
@@ -29,6 +32,14 @@ impl WgpuContext {
         let stuff_bind_group =
             create_bind_group(&device, &uniform_buffer, &stuff_bind_group_layout);
 
+        let vertices = vertices::get_vertices();
+        let vertex_buffer = buffers::create_vertex_buffer(&device, &vertices);
+
+        let indices = vertices::get_indices();
+        let index_buffer = buffers::create_index_buffer(&device, &indices);
+
+        let index_count = indices.len() as u32;
+
         let pipeline = create_render_pipeline(&device, &surface_config, &stuff_bind_group_layout);
 
         surface.configure(&device, &surface_config);
@@ -41,6 +52,9 @@ impl WgpuContext {
             pipeline,
             bind_group: stuff_bind_group,
             uniform_buffer,
+            vertex_buffer,
+            index_buffer,
+            index_count, // TODO: check if index_count field isn't redundant in WgpuContext struct
         })
     }
 
@@ -93,7 +107,10 @@ impl WgpuContext {
             });
             render_pass.set_pipeline(&self.pipeline);
             render_pass.set_bind_group(0, &self.bind_group, &[]);
-            render_pass.draw(0..3, 0..1);
+            render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+            render_pass.set_index_buffer(self.index_buffer.slice(..), IndexFormat::Uint16);
+            render_pass.draw_indexed(0..self.index_count, 0, 0..1);
+            // render_pass.draw(0..3, 0..1);
         }
 
         self.queue.submit(std::iter::once(encoder.finish()));
@@ -189,7 +206,7 @@ fn create_render_pipeline(
         module: &shader_module,
         entry_point: Some("vs_main"),
         compilation_options: PipelineCompilationOptions::default(),
-        buffers: &[],
+        buffers: &[vertices::Vertex::vertex_buffer_layout()],
     };
 
     let color_target_state = ColorTargetState {

@@ -14,6 +14,7 @@ use crate::{
 };
 
 const WINDOW_TITLE: &str = "unnamed-engine";
+const ROTATIONS_PER_SECOND: f32 = 0.125;
 
 #[derive(Default)]
 pub struct App {
@@ -124,6 +125,7 @@ impl ApplicationHandler for App {
                 let wgpu_context = self.wgpu_context.as_mut().unwrap();
                 wgpu_context.update_stuff_uniform(&uniforms::Stuff::new(
                     surface_size,
+                    ROTATIONS_PER_SECOND,
                     self.timer.as_ref().unwrap().elapsed().as_secs_f32(),
                 ));
                 if let Err(err) = wgpu_context.render(self.clear_color) {
