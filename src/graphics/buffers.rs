@@ -3,7 +3,7 @@ use wgpu::{
     util::{BufferInitDescriptor, DeviceExt},
 };
 
-use crate::graphics::vertices::Vertex;
+use crate::graphics::vertrex::Vertex;
 
 pub fn create_vertex_buffer(device: &Device, vertices: &[Vertex]) -> Buffer {
     device.create_buffer_init(&BufferInitDescriptor {
