@@ -10,28 +10,41 @@ use winit::{
 
 use crate::{
     graphics::{WgpuContext, uniforms},
+    state::State,
     user_events,
 };
 
 const WINDOW_TITLE: &str = "unnamed-engine";
 const ROTATIONS_PER_SECOND: f32 = 0.125;
 
-#[derive(Default)]
+// #[derive(Default)]
 pub struct App {
     window: Option<Arc<Window>>,
     wgpu_context: Option<WgpuContext>,
-    cursor_position: PhysicalPosition<f64>,
-    clear_color: wgpu::Color,
+    state: State,
     rendering_active: bool,
-    timer: Option<Instant>,
 }
 impl App {
     pub fn run() -> anyhow::Result<()> {
         let event_loop = EventLoop::new()?;
         event_loop.set_control_flow(ControlFlow::Poll);
-        event_loop.run_app(&mut Self::default())?;
+        event_loop.run_app(&mut Self::new())?;
 
         Ok(())
+    }
+
+    fn new() -> Self {
+        Self {
+            window: None,
+            wgpu_context: None,
+            state: State {
+                render_objects: Vec::new(),
+                cursor_position: PhysicalPosition::default(),
+                clear_color: wgpu::Color::WHITE,
+                timer: Instant::now(),
+            },
+            rendering_active: false,
+        }
     }
 }
 fn create_window(event_loop: &ActiveEventLoop) -> anyhow::Result<Arc<Window>> {
@@ -50,9 +63,6 @@ fn create_window(event_loop: &ActiveEventLoop) -> anyhow::Result<Arc<Window>> {
 impl ApplicationHandler for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         log::debug!("Application resumed");
-        if self.timer.is_none() {
-            self.timer = Some(Instant::now());
-        }
 
         let window = match create_window(event_loop) {
             Ok(window) => window,
@@ -81,13 +91,13 @@ impl ApplicationHandler for App {
     ) {
         match event {
             WindowEvent::CloseRequested => user_events::exit(event_loop),
-            WindowEvent::CursorMoved { position, .. } => self.cursor_position = position,
+            WindowEvent::CursorMoved { position, .. } => self.state.cursor_position = position,
             WindowEvent::MouseInput { state, button, .. } => {
                 log::debug!(
                     "MouseInput: {:?} {:?} at {:?}",
                     button,
                     state,
-                    self.cursor_position
+                    self.state.cursor_position
                 );
             }
             WindowEvent::MouseWheel { delta, phase, .. } => {
@@ -95,7 +105,7 @@ impl ApplicationHandler for App {
                     "MouseWheel: {:?} {:?} at {:?}",
                     delta,
                     phase,
-                    self.cursor_position
+                    self.state.cursor_position
                 );
             }
             WindowEvent::KeyboardInput {
@@ -111,24 +121,24 @@ impl ApplicationHandler for App {
                 {
                     let (width, height) =
                         { (surface_size.width as f64, surface_size.height as f64) };
-                    let (x, y) = { (self.cursor_position.x, self.cursor_position.y) };
+                    let (x, y) = { (self.state.cursor_position.x, self.state.cursor_position.y) };
 
                     let red = x / width;
                     let green = (1.0 - (x / width + y / height)).clamp(0.0, 1.0);
                     let blue = y / height;
 
-                    self.clear_color.r = red;
-                    self.clear_color.g = green;
-                    self.clear_color.b = blue;
+                    self.state.clear_color.r = red;
+                    self.state.clear_color.g = green;
+                    self.state.clear_color.b = blue;
                 }
 
                 let wgpu_context = self.wgpu_context.as_mut().unwrap();
                 wgpu_context.update_stuff_uniform(&uniforms::Stuff::new(
                     surface_size,
                     ROTATIONS_PER_SECOND,
-                    self.timer.as_ref().unwrap().elapsed().as_secs_f32(),
+                    self.state.timer.elapsed().as_secs_f32(),
                 ));
-                if let Err(err) = wgpu_context.render(self.clear_color) {
+                if let Err(err) = wgpu_context.render(self.state.clear_color) {
                     log::error!("Unable to render: {err}");
                 }
                 if self.rendering_active {
