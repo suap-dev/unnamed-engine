@@ -10,7 +10,7 @@ use winit::{
 
 use crate::{
     app::{State, events},
-    graphics::{WgpuContext, primitives::regular_polygon, render_object::RenderObject},
+    graphics::{GraphicsContext, primitives::regular_polygon, render_object::RenderObject},
 };
 
 const WINDOW_TITLE: &str = "unnamed-engine";
@@ -19,7 +19,7 @@ const ROTATIONS_PER_SECOND: f32 = 0.125;
 // #[derive(Default)]
 pub struct App {
     window: Option<Arc<Window>>,
-    wgpu_context: Option<WgpuContext>,
+    wgpu_context: Option<GraphicsContext>,
     state: State,
     rendering_active: bool,
 }
@@ -80,7 +80,7 @@ impl ApplicationHandler for App {
         };
 
         if self.wgpu_context.is_none() {
-            match WgpuContext::setup(&window, &mut self.state) {
+            match GraphicsContext::setup(&window, &mut self.state) {
                 Ok(wgpu_context) => self.wgpu_context = Some(wgpu_context),
                 Err(err) => log::error!("Unable to set up graphics: {err}"),
             }

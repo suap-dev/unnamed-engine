@@ -5,13 +5,13 @@ use winit::dpi::PhysicalSize;
 
 use crate::{
     app::State,
-    graphics::{
-        pipeline::*,
+    graphics::renderer::{
+        pipeline,
         uniforms::{AppDataUniform, Uniforms},
     },
 };
 
-pub struct WgpuContext {
+pub struct GraphicsContext {
     surface_config: SurfaceConfiguration,
     surface: Surface<'static>,
     device: Device,
@@ -20,18 +20,19 @@ pub struct WgpuContext {
     uniforms: Uniforms,
 }
 
-impl WgpuContext {
+impl GraphicsContext {
     pub fn setup(window: &Arc<winit::window::Window>, state: &mut State) -> anyhow::Result<Self> {
         log::debug!("Setting up wgpu");
 
         let instance = Instance::new(&InstanceDescriptor::default());
         let surface = instance.create_surface(window.clone())?;
-        let adapter = request_adapter(instance, &surface)?;
-        let (device, queue) = request_device(&adapter)?;
-        let surface_config = create_surface_config(window, &surface, adapter);
+        let adapter = pipeline::request_adapter(instance, &surface)?;
+        let (device, queue) = pipeline::request_device(&adapter)?;
+        let surface_config = pipeline::create_surface_config(window, &surface, adapter);
         let uniforms = Uniforms::new(&device);
 
-        let pipeline = create_render_pipeline(&device, &surface_config, uniforms.layout());
+        let pipeline =
+            pipeline::create_render_pipeline(&device, &surface_config, uniforms.layout());
 
         surface.configure(&device, &surface_config);
         state.ensure_render_data(&device);
