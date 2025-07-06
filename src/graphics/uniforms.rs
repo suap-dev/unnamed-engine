@@ -1,8 +1,4 @@
-use wgpu::{
-    BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayout, BindGroupLayoutDescriptor,
-    BindGroupLayoutEntry, BindingType, Buffer, BufferBindingType, BufferDescriptor, BufferUsages,
-    Device, Queue, ShaderStages,
-};
+use wgpu::*;
 use winit::dpi::PhysicalSize;
 
 #[repr(C)]
@@ -48,7 +44,7 @@ impl Uniforms {
     pub fn layout(&self) -> &BindGroupLayout {
         &self.layout
     }
-    
+
     pub fn bind_group(&self) -> &BindGroup {
         &self.bind_group
     }

@@ -8,11 +8,7 @@ use winit::{
     window::{Window, WindowAttributes, WindowId},
 };
 
-use crate::{
-    graphics::{WgpuContext, uniforms},
-    state::State,
-    user_events,
-};
+use crate::{graphics::WgpuContext, state::State, user_events};
 
 const WINDOW_TITLE: &str = "unnamed-engine";
 const ROTATIONS_PER_SECOND: f32 = 0.125;
@@ -40,7 +36,12 @@ impl App {
             state: State {
                 render_objects: Vec::new(),
                 cursor_position: PhysicalPosition::default(),
-                clear_color: wgpu::Color::WHITE,
+                clear_color: wgpu::Color {
+                    g: 0.25,
+                    r: 0.25,
+                    b: 0.25,
+                    a: 1.0,
+                },
                 timer: Instant::now(),
             },
             rendering_active: false,
@@ -117,20 +118,6 @@ impl ApplicationHandler for App {
             WindowEvent::RedrawRequested => {
                 let window = self.window.as_ref().unwrap();
                 let surface_size = window.inner_size();
-                // TODO: delete; funzies
-                {
-                    let (width, height) =
-                        { (surface_size.width as f64, surface_size.height as f64) };
-                    let (x, y) = { (self.state.cursor_position.x, self.state.cursor_position.y) };
-
-                    let red = x / width;
-                    let green = (1.0 - (x / width + y / height)).clamp(0.0, 1.0);
-                    let blue = y / height;
-
-                    self.state.clear_color.r = red;
-                    self.state.clear_color.g = green;
-                    self.state.clear_color.b = blue;
-                }
 
                 let wgpu_context = self.wgpu_context.as_mut().unwrap();
                 wgpu_context.update_uniforms(surface_size, self.state.timer.elapsed());

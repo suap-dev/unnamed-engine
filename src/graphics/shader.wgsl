@@ -1,7 +1,6 @@
-struct Stuff {
+struct AppDataUniform {
     surface_size: vec2f,
     time: f32,
-    rotations_per_second: f32,
 }
 
 struct VertexInput {
@@ -17,11 +16,11 @@ struct VertexOutput {
 const tau = 6.283185307179586;
 
 @group(0) @binding(0)
-var<uniform> stuff: Stuff;
+var<uniform> app_data: AppDataUniform;
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
-    let position = scale(rotate_2d(in.position, tau * stuff.rotations_per_second * stuff.time), stuff.surface_size);
+    let position = scale(in.position, app_data.surface_size);
 
     var out: VertexOutput;
     out.position = vec4f(position, 0, 1);

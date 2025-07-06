@@ -28,6 +28,6 @@ pub fn indices(n: u16) -> Vec<u16> {
 }
 
 fn ngon_vertex_pos(vertex_nr: u16, n: u16, circumradius: f32) -> [f32; 2] {
-    let v0 = [0.0, -circumradius as f64];
+    let v0 = [0.0, circumradius as f64];
     math::rotate_2d(v0, vertex_nr as f64 * TAU / (n as f64))
 }

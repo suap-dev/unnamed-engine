@@ -16,18 +16,13 @@ pub struct WgpuContext {
     device: Device,
     queue: Queue,
     pipeline: RenderPipeline,
-    // TODO: clean up the buffers initialisations; what should and what shouldn't be in wgpu context?
-    // bind_group: BindGroup,
-    // uniform_buffer: Buffer,
     uniforms: Uniforms,
+
+    // TODO: set buffers per RenderObject
     vertex_buffer: Buffer,
     index_buffer: Buffer,
     index_count: u32,
 }
-
-const N_GON_VERTICES: u16 = 8;
-const N_GON_CIRCUMRADIUS: f32 = 0.66;
-const N_GON_COLOR: Color = Color::RED;
 
 impl WgpuContext {
     pub fn setup(window: &Arc<winit::window::Window>) -> anyhow::Result<Self> {
@@ -45,10 +40,9 @@ impl WgpuContext {
         surface.configure(&device, &surface_config);
 
         // TODO: remove hardcodded test-buffers
-        let ngon = primitives::ngon(N_GON_VERTICES, N_GON_CIRCUMRADIUS, N_GON_COLOR);
+        let ngon = primitives::ngon(3, 0.5, wgpu::Color::WHITE);
         let vertex_buffer = buffers::create_vertex_buffer(&device, &ngon.vertices);
         let index_buffer = buffers::create_index_buffer(&device, &ngon.indices);
-
         let index_count = ngon.indices.len() as u32;
 
         Ok(Self {

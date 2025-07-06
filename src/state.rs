@@ -1,4 +1,4 @@
-use std::{default, time::Instant};
+use std::time::Instant;
 
 use winit::dpi::PhysicalPosition;
 
