@@ -1,4 +1,4 @@
-use crate::graphics::vertrex::Vertex;
+use crate::graphics::vertex::Vertex;
 
 pub struct Mesh {
     pub vertices: Vec<Vertex>,

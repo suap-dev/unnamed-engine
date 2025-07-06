@@ -39,7 +39,7 @@ impl WgpuContext {
 
         surface.configure(&device, &surface_config);
 
-        // TODO: remove hardcodded test-buffers
+        // TODO: remove hardcoded test-buffers
         let ngon = primitives::ngon(3, 0.5, wgpu::Color::WHITE);
         let vertex_buffer = buffers::create_vertex_buffer(&device, &ngon.vertices);
         let index_buffer = buffers::create_index_buffer(&device, &ngon.indices);

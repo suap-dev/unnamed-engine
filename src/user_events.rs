@@ -49,7 +49,6 @@ fn toggle_control_flow(event_loop: &winit::event_loop::ActiveEventLoop) {
     log::info!("Control flow changed: {previous_flow:?} -> {new_flow:?}");
 }
 
-//
 fn request_redraw(window: &Arc<Window>) {
     log::info!("Manual redraw requested");
     window.request_redraw();

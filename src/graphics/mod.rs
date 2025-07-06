@@ -5,9 +5,9 @@ mod pipeline;
 mod primitives;
 pub mod render_object;
 pub mod uniforms;
-mod vertrex;
+mod vertex;
 pub mod wgpu_context;
 
 pub use mesh::Mesh;
-pub use vertrex::Vertex;
+pub use vertex::Vertex;
 pub use wgpu_context::WgpuContext;

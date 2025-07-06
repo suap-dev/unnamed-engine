@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use wgpu::*;
 
-use crate::graphics::vertrex;
+use crate::graphics::vertex;
 
 pub fn request_device(adapter: &Adapter) -> Result<(Device, Queue), RequestDeviceError> {
     pollster::block_on(adapter.request_device(&DeviceDescriptor::default()))
@@ -58,7 +58,7 @@ pub fn create_render_pipeline(
         module: &shader_module,
         entry_point: Some("vs_main"),
         compilation_options: PipelineCompilationOptions::default(),
-        buffers: &[vertrex::Vertex::vertex_buffer_layout()],
+        buffers: &[vertex::Vertex::vertex_buffer_layout()],
     };
 
     let color_target_state = ColorTargetState {
