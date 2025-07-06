@@ -51,7 +51,7 @@ pub fn create_render_pipeline(
 ) -> RenderPipeline {
     let shader_module = device.create_shader_module(ShaderModuleDescriptor {
         label: Some("Shader #0"),
-        source: ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
+        source: ShaderSource::Wgsl(include_str!("..\\shaders\\basic.wgsl").into()),
     });
 
     let vertex_state = VertexState {

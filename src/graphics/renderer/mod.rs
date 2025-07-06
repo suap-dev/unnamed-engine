@@ -1,4 +1,3 @@
-mod buffers;
-pub (in crate::graphics) mod context;
+pub mod context;
 mod pipeline;
 mod uniforms;

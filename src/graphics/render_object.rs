@@ -1,6 +1,6 @@
 use wgpu::util::DeviceExt;
 
-use crate::graphics::Mesh;
+use crate::graphics::{Mesh, Transform};
 
 struct RenderData {
     vertex_buffer: wgpu::Buffer,
@@ -16,11 +16,7 @@ pub struct RenderObject {
     // - state only holds objet TYPE and transform, all the render data stay in graphics/wgpu_context; invisible to state and app.
     pub mesh: Mesh,
     pub name: Option<String>,
-
-    pub position: [f32; 2],
-    pub scale: f32,
-    pub rotation: f32,
-
+    pub transform: Transform,
     render_data: Option<RenderData>,
 }
 impl RenderObject {
@@ -28,9 +24,7 @@ impl RenderObject {
         Self {
             mesh: mesh.clone(),
             name: name.map(|name| name.to_string()),
-            position: [0.0, 0.0],
-            scale: 1.0,
-            rotation: 0.0,
+            transform: Default::default(),
             render_data: None,
         }
     }
