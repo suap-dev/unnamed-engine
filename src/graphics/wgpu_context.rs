@@ -4,11 +4,11 @@ use wgpu::*;
 use winit::dpi::PhysicalSize;
 
 use crate::{
+    app::State,
     graphics::{
         pipeline::*,
         uniforms::{AppDataUniform, Uniforms},
     },
-    state::State,
 };
 
 pub struct WgpuContext {

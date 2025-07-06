@@ -9,9 +9,8 @@ use winit::{
 };
 
 use crate::{
+    app::{State, events},
     graphics::{WgpuContext, primitives::regular_polygon, render_object::RenderObject},
-    state::State,
-    user_events,
 };
 
 const WINDOW_TITLE: &str = "unnamed-engine";
@@ -98,7 +97,7 @@ impl ApplicationHandler for App {
         event: WindowEvent,
     ) {
         match event {
-            WindowEvent::CloseRequested => user_events::exit(event_loop),
+            WindowEvent::CloseRequested => events::exit(event_loop),
             WindowEvent::CursorMoved { position, .. } => self.state.cursor_position = position,
             WindowEvent::MouseInput { state, button, .. } => {
                 log::debug!(
@@ -120,7 +119,7 @@ impl ApplicationHandler for App {
                 event: key_event, ..
             } => {
                 let window = self.window.as_ref().unwrap();
-                user_events::handle_key_event(key_event, event_loop, window);
+                events::handle_key_event(key_event, event_loop, window);
             }
             WindowEvent::RedrawRequested => {
                 let window = self.window.as_ref().unwrap();
