@@ -8,7 +8,11 @@ use winit::{
     window::{Window, WindowAttributes, WindowId},
 };
 
-use crate::{graphics::WgpuContext, state::State, user_events};
+use crate::{
+    graphics::{WgpuContext, primitives::regular_polygon, render_object::RenderObject},
+    state::State,
+    user_events,
+};
 
 const WINDOW_TITLE: &str = "unnamed-engine";
 const ROTATIONS_PER_SECOND: f32 = 0.125;
@@ -34,7 +38,10 @@ impl App {
             window: None,
             wgpu_context: None,
             state: State {
-                render_objects: Vec::new(),
+                render_objects: vec![RenderObject::new(
+                    &regular_polygon(4, 0.7, wgpu::Color::BLACK),
+                    Some("The Square"),
+                )],
                 cursor_position: PhysicalPosition::default(),
                 clear_color: wgpu::Color {
                     g: 0.25,
@@ -74,7 +81,7 @@ impl ApplicationHandler for App {
         };
 
         if self.wgpu_context.is_none() {
-            match WgpuContext::setup(&window) {
+            match WgpuContext::setup(&window, &mut self.state) {
                 Ok(wgpu_context) => self.wgpu_context = Some(wgpu_context),
                 Err(err) => log::error!("Unable to set up graphics: {err}"),
             }
@@ -121,7 +128,7 @@ impl ApplicationHandler for App {
 
                 let wgpu_context = self.wgpu_context.as_mut().unwrap();
                 wgpu_context.update_uniforms(surface_size, self.state.timer.elapsed());
-                if let Err(err) = wgpu_context.render(self.state.clear_color) {
+                if let Err(err) = wgpu_context.render(&self.state) {
                     log::error!("Unable to render: {err}");
                 }
 

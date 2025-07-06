@@ -2,17 +2,17 @@ use crate::graphics::Mesh;
 
 mod ngon;
 
-pub fn ngon(n: u16, circumradius: f32, color: wgpu::Color) -> Mesh {
+pub fn regular_polygon(vertices: u16, circumradius: f32, color: wgpu::Color) -> Mesh {
     Mesh {
-        vertices: ngon::vertices(n, circumradius, color),
-        indices: ngon::indices(n),
+        vertices: ngon::vertices(vertices, circumradius, color),
+        indices: ngon::indices(vertices),
     }
 }
 
 pub fn triangle(circumradius: f32, color: wgpu::Color) -> Mesh {
-    ngon(3, circumradius, color)
+    regular_polygon(3, circumradius, color)
 }
 
 pub fn square(circumradius: f32, color: wgpu::Color) -> Mesh {
-    ngon(4, circumradius, color)
+    regular_polygon(4, circumradius, color)
 }

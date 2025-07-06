@@ -2,7 +2,7 @@ mod buffers;
 mod math;
 mod mesh;
 mod pipeline;
-mod primitives;
+pub mod primitives;
 pub mod render_object;
 pub mod uniforms;
 mod vertex;

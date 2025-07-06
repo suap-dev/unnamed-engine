@@ -10,3 +10,10 @@ pub struct State {
     pub clear_color: wgpu::Color,
     pub timer: Instant,
 }
+impl State {
+    pub fn ensure_render_data(&mut self, device: &wgpu::Device) {
+        for obj in &mut self.render_objects {
+            obj.ensure_render_data(device);
+        }
+    }
+}
