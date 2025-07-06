@@ -14,9 +14,7 @@ use crate::{
 };
 
 const WINDOW_TITLE: &str = "unnamed-engine";
-const ROTATIONS_PER_SECOND: f32 = 0.125;
 
-// #[derive(Default)]
 pub struct App {
     window: Option<Arc<Window>>,
     wgpu_context: Option<GraphicsContext>,
