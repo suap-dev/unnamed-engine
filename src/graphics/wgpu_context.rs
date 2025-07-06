@@ -1,9 +1,14 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use wgpu::*;
 use winit::dpi::PhysicalSize;
 
-use crate::graphics::{buffers, pipeline::*, primitives, uniforms::Stuff};
+use crate::graphics::{
+    buffers,
+    pipeline::*,
+    primitives,
+    uniforms::{AppDataUniform, Uniforms},
+};
 
 pub struct WgpuContext {
     surface_config: SurfaceConfiguration,
@@ -11,9 +16,10 @@ pub struct WgpuContext {
     device: Device,
     queue: Queue,
     pipeline: RenderPipeline,
-    bind_group: BindGroup,
     // TODO: clean up the buffers initialisations; what should and what shouldn't be in wgpu context?
-    uniform_buffer: Buffer,
+    // bind_group: BindGroup,
+    // uniform_buffer: Buffer,
+    uniforms: Uniforms,
     vertex_buffer: Buffer,
     index_buffer: Buffer,
     index_count: u32,
@@ -32,12 +38,9 @@ impl WgpuContext {
         let adapter = request_adapter(instance, &surface)?;
         let (device, queue) = request_device(&adapter)?;
         let surface_config = create_surface_config(window, &surface, adapter);
-        let uniform_buffer = create_uniform_buffer(&device);
-        let stuff_bind_group_layout = create_bind_group_layout(&device);
-        let stuff_bind_group =
-            create_bind_group(&device, &uniform_buffer, &stuff_bind_group_layout);
+        let uniforms = Uniforms::new(&device);
 
-        let pipeline = create_render_pipeline(&device, &surface_config, &stuff_bind_group_layout);
+        let pipeline = create_render_pipeline(&device, &surface_config, uniforms.layout());
 
         surface.configure(&device, &surface_config);
 
@@ -54,8 +57,7 @@ impl WgpuContext {
             device,
             queue,
             pipeline,
-            bind_group: stuff_bind_group,
-            uniform_buffer,
+            uniforms,
             vertex_buffer,
             index_buffer,
             index_count, // TODO: check if index_count field isn't redundant in WgpuContext struct
@@ -110,7 +112,7 @@ impl WgpuContext {
                 ..Default::default()
             });
             render_pass.set_pipeline(&self.pipeline);
-            render_pass.set_bind_group(0, &self.bind_group, &[]);
+            render_pass.set_bind_group(0, self.uniforms.bind_group(), &[]);
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
             render_pass.set_index_buffer(self.index_buffer.slice(..), IndexFormat::Uint16);
             render_pass.draw_indexed(0..self.index_count, 0, 0..1);
@@ -123,8 +125,10 @@ impl WgpuContext {
         Ok(())
     }
 
-    pub fn update_stuff_uniform(&mut self, data: &Stuff) {
-        self.queue
-            .write_buffer(&self.uniform_buffer, 0, bytemuck::cast_slice(&[*data]));
+    pub fn update_uniforms(&mut self, surface_size: PhysicalSize<u32>, time: Duration) {
+        self.uniforms.update(
+            &self.queue,
+            &AppDataUniform::new(surface_size, time.as_secs_f32()),
+        );
     }
 }

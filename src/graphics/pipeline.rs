@@ -4,24 +4,6 @@ use wgpu::*;
 
 use crate::graphics::vertrex;
 
-#[must_use]
-pub fn create_bind_group(
-    device: &Device,
-    uniform_buffer: &Buffer,
-    bind_group_layout: &BindGroupLayout,
-) -> BindGroup {
-    let stuff_entry = BindGroupEntry {
-        binding: 0,
-        resource: uniform_buffer.as_entire_binding(),
-    };
-
-    device.create_bind_group(&BindGroupDescriptor {
-        label: Some("Stuff Uniform Bind Group"),
-        layout: bind_group_layout,
-        entries: &[stuff_entry],
-    })
-}
-
 pub fn request_device(adapter: &Adapter) -> Result<(Device, Queue), RequestDeviceError> {
     pollster::block_on(adapter.request_device(&DeviceDescriptor::default()))
 }
@@ -35,16 +17,6 @@ pub fn request_adapter(
         force_fallback_adapter: false,
         compatible_surface: Some(surface),
     }))
-}
-
-#[must_use]
-pub fn create_uniform_buffer(device: &Device) -> Buffer {
-    device.create_buffer(&BufferDescriptor {
-        label: Some("Stuff Uniform Buffer"),
-        size: 16,
-        usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
-        mapped_at_creation: false,
-    })
 }
 
 #[must_use]
@@ -118,24 +90,5 @@ pub fn create_render_pipeline(
         fragment: Some(fragment_state),
         multiview: None,
         cache: None,
-    })
-}
-
-#[must_use]
-pub fn create_bind_group_layout(device: &Device) -> BindGroupLayout {
-    let bind_group_layout_0_entry_0 = BindGroupLayoutEntry {
-        binding: 0,
-        visibility: ShaderStages::VERTEX,
-        ty: BindingType::Buffer {
-            ty: BufferBindingType::Uniform,
-            has_dynamic_offset: false,
-            min_binding_size: Some(NonZero::new(16).unwrap()), // we KNOW the size of Stuff
-        },
-        count: None, // only applies to arrays of elements in buffers
-    };
-
-    device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-        label: Some("Uniform Bind Group Layout #0"),
-        entries: &[bind_group_layout_0_entry_0],
     })
 }
