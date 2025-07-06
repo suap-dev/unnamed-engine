@@ -1,44 +1,71 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use wgpu::*;
 use winit::dpi::PhysicalSize;
 
-#[derive(Default)]
+use crate::graphics::{
+    buffers,
+    pipeline::*,
+    primitives,
+    uniforms::{AppDataUniform, Uniforms},
+};
+
 pub struct WgpuContext {
-    config: Option<SurfaceConfiguration>,
-    instance: Option<Instance>,
-    surface: Option<Surface<'static>>,
-    device: Option<Device>,
-    adapter: Option<Adapter>,
-    queue: Option<Queue>,
-    pipeline: Option<RenderPipeline>,
+    surface_config: SurfaceConfiguration,
+    surface: Surface<'static>,
+    device: Device,
+    queue: Queue,
+    pipeline: RenderPipeline,
+    uniforms: Uniforms,
+
+    // TODO: set buffers per RenderObject
+    vertex_buffer: Buffer,
+    index_buffer: Buffer,
+    index_count: u32,
 }
 
 impl WgpuContext {
-    pub fn setup(&mut self, window: &Arc<winit::window::Window>) -> anyhow::Result<()> {
+    pub fn setup(window: &Arc<winit::window::Window>) -> anyhow::Result<Self> {
         log::debug!("Setting up wgpu");
 
-        self.ensure_instance();
-        self.ensure_surface(window)?;
-        self.ensure_adapter()?;
-        self.ensure_device()?;
-        self.ensure_config(window.inner_size());
-        self.ensure_pipeline();
+        let instance = Instance::new(&InstanceDescriptor::default());
+        let surface = instance.create_surface(window.clone())?;
+        let adapter = request_adapter(instance, &surface)?;
+        let (device, queue) = request_device(&adapter)?;
+        let surface_config = create_surface_config(window, &surface, adapter);
+        let uniforms = Uniforms::new(&device);
 
-        self.configure_surface();
+        let pipeline = create_render_pipeline(&device, &surface_config, uniforms.layout());
 
-        Ok(())
+        surface.configure(&device, &surface_config);
+
+        // TODO: remove hardcodded test-buffers
+        let ngon = primitives::ngon(3, 0.5, wgpu::Color::WHITE);
+        let vertex_buffer = buffers::create_vertex_buffer(&device, &ngon.vertices);
+        let index_buffer = buffers::create_index_buffer(&device, &ngon.indices);
+        let index_count = ngon.indices.len() as u32;
+
+        Ok(Self {
+            surface_config,
+            surface,
+            device,
+            queue,
+            pipeline,
+            uniforms,
+            vertex_buffer,
+            index_buffer,
+            index_count, // TODO: check if index_count field isn't redundant in WgpuContext struct
+        })
     }
 
+    #[must_use]
     pub fn get_surface_size(&self) -> PhysicalSize<u32> {
-        let config = self.config.as_ref().unwrap();
         PhysicalSize {
-            width: config.width,
-            height: config.height,
+            width: self.surface_config.width,
+            height: self.surface_config.height,
         }
     }
 
-    // TODO: can assume that all the struct fields are already initialised?
     pub fn resize_surface(&mut self, width: u32, height: u32) -> anyhow::Result<()> {
         log::debug!("Resizing surface");
 
@@ -48,24 +75,22 @@ impl WgpuContext {
             );
         }
 
-        let surface = self.surface.as_ref().unwrap();
-        let device = self.device.as_ref().unwrap();
+        self.surface_config.width = width;
+        self.surface_config.height = height;
 
-        let config = self.config.as_mut().unwrap();
-        config.width = width;
-        config.height = height;
+        self.surface.configure(&self.device, &self.surface_config);
 
-        surface.configure(device, config);
         Ok(())
     }
 
     pub fn render(&self, clear_color: Color) -> anyhow::Result<()> {
         log::debug!("Rendering");
 
-        let output = self.surface.as_ref().unwrap().get_current_texture()?;
-        let device = self.device.as_ref().unwrap();
+        let output = self.surface.get_current_texture()?;
 
-        let mut encoder = device.create_command_encoder(&CommandEncoderDescriptor::default());
+        let mut encoder = self
+            .device
+            .create_command_encoder(&CommandEncoderDescriptor::default());
         {
             let mut render_pass = encoder.begin_render_pass(&RenderPassDescriptor {
                 color_attachments: &[Some(RenderPassColorAttachment {
@@ -80,142 +105,24 @@ impl WgpuContext {
                 })],
                 ..Default::default()
             });
-            let pipeline = self.pipeline.as_ref().unwrap();
-            render_pass.set_pipeline(pipeline);
-            render_pass.draw(0..3, 0..1);
+            render_pass.set_pipeline(&self.pipeline);
+            render_pass.set_bind_group(0, self.uniforms.bind_group(), &[]);
+            render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+            render_pass.set_index_buffer(self.index_buffer.slice(..), IndexFormat::Uint16);
+            render_pass.draw_indexed(0..self.index_count, 0, 0..1);
+            // render_pass.draw(0..3, 0..1);
         }
 
-        let queue = self.queue.as_ref().unwrap();
-        queue.submit(std::iter::once(encoder.finish()));
+        self.queue.submit(std::iter::once(encoder.finish()));
         output.present();
 
         Ok(())
     }
 
-    // private
-    fn ensure_instance(&mut self) {
-        if self.instance.is_none() {
-            self.instance = Some(Instance::new(&InstanceDescriptor::default()))
-        }
-    }
-
-    fn ensure_surface(&mut self, window: &Arc<winit::window::Window>) -> anyhow::Result<()> {
-        if self.surface.is_none() {
-            let instance = self.instance.as_ref().unwrap();
-
-            self.surface = Some(instance.create_surface(window.clone())?);
-        }
-        Ok(())
-    }
-
-    fn ensure_adapter(&mut self) -> anyhow::Result<()> {
-        if self.adapter.is_none() {
-            let instance = self.instance.as_ref().unwrap();
-            let surface = self.surface.as_ref().unwrap();
-
-            self.adapter = Some(pollster::block_on(instance.request_adapter(
-                &RequestAdapterOptions {
-                    power_preference: PowerPreference::default(),
-                    force_fallback_adapter: false,
-                    compatible_surface: Some(surface),
-                },
-            ))?);
-        }
-        Ok(())
-    }
-
-    fn ensure_device(&mut self) -> anyhow::Result<()> {
-        if self.device.is_none() || self.queue.is_none() {
-            let adapter = self.adapter.as_ref().unwrap();
-            let (device, queue) =
-                pollster::block_on(adapter.request_device(&DeviceDescriptor::default()))?;
-
-            self.device = Some(device);
-            self.queue = Some(queue);
-        }
-        Ok(())
-    }
-
-    fn ensure_config(&mut self, surface_size: PhysicalSize<u32>) {
-        if self.config.is_none() {
-            let surface = self.surface.as_ref().unwrap();
-            let adapter = self.adapter.as_ref().unwrap();
-            let surface_capabilities = surface.get_capabilities(adapter);
-
-            self.config = Some(SurfaceConfiguration {
-                usage: TextureUsages::RENDER_ATTACHMENT,
-                format: *surface_capabilities
-                    .formats
-                    .iter()
-                    .find(|format| format.is_srgb())
-                    .unwrap(),
-                width: surface_size.width,
-                height: surface_size.height,
-                present_mode: surface_capabilities.present_modes[0],
-                desired_maximum_frame_latency: 2,
-                alpha_mode: surface_capabilities.alpha_modes[0],
-                view_formats: vec![],
-            });
-        }
-    }
-
-    fn configure_surface(&mut self) {
-        let device = self.device.as_ref().unwrap();
-        let config = self.config.as_ref().unwrap();
-        let surface = self.surface.as_ref().unwrap();
-
-        surface.configure(device, config);
-    }
-
-    fn ensure_pipeline(&mut self) {
-        self.pipeline = Some(self.create_render_pipeline());
-    }
-
-    fn create_render_pipeline(&mut self) -> RenderPipeline {
-        let device = self.device.as_ref().unwrap();
-        let config = self.config.as_ref().unwrap();
-
-        let shader_module = device.create_shader_module(ShaderModuleDescriptor {
-            label: Some("Shader #0"),
-            source: ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
-        });
-
-        let vertex_state = VertexState {
-            module: &shader_module,
-            entry_point: Some("vs_main"),
-            compilation_options: PipelineCompilationOptions::default(),
-            buffers: &[],
-        };
-
-        let color_target_state = ColorTargetState {
-            format: config.format,
-            blend: None,
-            write_mask: ColorWrites::ALL,
-        };
-
-        let fragment_state = FragmentState {
-            module: &shader_module,
-            entry_point: Some("fs_main"),
-            compilation_options: PipelineCompilationOptions::default(),
-            targets: &[Some(color_target_state)],
-        };
-
-        let layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
-            label: Some("Pipeline Layout #0"),
-            bind_group_layouts: &[],
-            push_constant_ranges: &[],
-        });
-
-        device.create_render_pipeline(&RenderPipelineDescriptor {
-            label: Some("Render Pipeline #0"),
-            layout: Some(&layout),
-            vertex: vertex_state,
-            primitive: PrimitiveState::default(),
-            depth_stencil: None,
-            multisample: MultisampleState::default(),
-            fragment: Some(fragment_state),
-            multiview: None,
-            cache: None,
-        })
+    pub fn update_uniforms(&mut self, surface_size: PhysicalSize<u32>, time: Duration) {
+        self.uniforms.update(
+            &self.queue,
+            &AppDataUniform::new(surface_size, time.as_secs_f32()),
+        );
     }
 }
