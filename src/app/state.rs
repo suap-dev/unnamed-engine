@@ -2,7 +2,7 @@ use std::time::Instant;
 
 use winit::dpi::PhysicalPosition;
 
-use crate::graphics::render_object::RenderObject;
+use crate::graphics::RenderObject;
 
 pub struct State {
     pub render_objects: Vec<RenderObject>,

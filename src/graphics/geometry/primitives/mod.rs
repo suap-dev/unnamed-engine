@@ -1,6 +1,6 @@
-use crate::graphics::Mesh;
-
 mod ngon;
+
+use crate::graphics::Mesh;
 
 pub fn regular_polygon(vertices: u16, circumradius: f32, color: wgpu::Color) -> Mesh {
     Mesh {

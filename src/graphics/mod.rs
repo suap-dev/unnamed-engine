@@ -1,11 +1,10 @@
-pub mod primitives;
-pub mod render_object;
-
+mod geometry;
 mod math;
-mod mesh;
+mod render_object;
 mod renderer;
-mod vertex;
 
-pub use mesh::Mesh;
+pub use geometry::mesh::Mesh;
+pub use geometry::primitives;
+pub use geometry::vertex::Vertex;
+pub use render_object::RenderObject;
 pub use renderer::context::GraphicsContext;
-pub use vertex::Vertex;

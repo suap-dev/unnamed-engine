@@ -10,7 +10,7 @@ use winit::{
 
 use crate::{
     app::{State, events},
-    graphics::{GraphicsContext, primitives::regular_polygon, render_object::RenderObject},
+    graphics::{GraphicsContext, RenderObject, primitives},
 };
 
 const WINDOW_TITLE: &str = "unnamed-engine";
@@ -38,7 +38,7 @@ impl App {
             wgpu_context: None,
             state: State {
                 render_objects: vec![RenderObject::new(
-                    &regular_polygon(4, 0.7, wgpu::Color::BLACK),
+                    &primitives::regular_polygon(4, 0.7, wgpu::Color::BLACK),
                     Some("The Square"),
                 )],
                 cursor_position: PhysicalPosition::default(),

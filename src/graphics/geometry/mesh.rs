@@ -1,4 +1,4 @@
-use crate::graphics::vertex::Vertex;
+use crate::graphics::geometry::vertex::Vertex;
 
 #[derive(Clone)]
 pub struct Mesh {
