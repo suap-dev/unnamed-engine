@@ -1,7 +1,20 @@
-// TODO: find and use native rotate method
-pub fn rotate_2d(v: [f64; 2], angle: f64) -> [f32; 2] {
-    let c = angle.cos();
-    let s = angle.sin();
+use std::f64::consts::TAU;
 
-    [(v[0] * c - v[1] * s) as f32, (v[0] * s + v[1] * c) as f32]
+use num_traits::AsPrimitive;
+
+// TODO: find and use native rotate method
+pub fn rotated_2d<T: AsPrimitive<f64>, U: AsPrimitive<f64>>(v: [T; 2], angle: U) -> [f64; 2] {
+    let (x, y) = (v[0].as_(), v[1].as_());
+    let c = angle.as_().cos();
+    let s = angle.as_().sin();
+
+    [(x * c - y * s), x * s + y * s]
+}
+
+pub fn to_radians<T: AsPrimitive<f64>>(degrees: T) -> f64 {
+    degrees.as_() / 360.0 * TAU
+}
+
+pub fn to_degrees<T: AsPrimitive<f64>>(rad: T) -> f64 {
+    rad.as_() / TAU * 360.0
 }

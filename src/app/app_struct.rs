@@ -120,7 +120,9 @@ impl ApplicationHandler for App {
                         },
                     ),
                     Some("TestTriangle"),
-                    Transform::default(),
+                    Transform::builder()
+                        .physical_position(self.state.cursor_position)
+                        .build(),
                 ));
             }
             WindowEvent::MouseWheel { delta, phase, .. } => {

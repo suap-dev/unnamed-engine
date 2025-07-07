@@ -1768,6 +1768,7 @@ dependencies = [
  "bytemuck",
  "env_logger",
  "log",
+ "num-traits",
  "pollster",
  "wgpu",
  "winit",
