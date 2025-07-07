@@ -16,4 +16,8 @@ impl State {
             obj.ensure_render_data(device);
         }
     }
+
+    pub fn add_object(&mut self, object: RenderObject) {
+        self.render_objects.push(object);
+    }
 }

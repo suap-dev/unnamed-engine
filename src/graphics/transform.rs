@@ -1,3 +1,4 @@
+#[derive(Clone, Copy)]
 pub struct Transform {
     pub position: [f32; 2],
     pub rotation: f32,

@@ -72,7 +72,7 @@ impl GraphicsContext {
         Ok(())
     }
 
-    pub fn render(&self, state: &State) -> anyhow::Result<()> {
+    pub fn render(&self, state: &mut State) -> anyhow::Result<()> {
         log::debug!("Rendering");
 
         let output = self.surface.get_current_texture()?;
@@ -98,6 +98,8 @@ impl GraphicsContext {
             render_pass.set_bind_group(0, self.uniforms.bind_group(), &[]);
             // TODO: instead of drawing all the objects separately, try keeping object kind/handle and then it's transform in
             // TODO: keep transforms in separate Vecs, not the entire objects; send transforms as uniforms
+            // TODO: rethink ensure_render_data usage. it's quite strange I think. maybe on state-change not on every render?
+            state.ensure_render_data(&self.device);
             for obj in &state.render_objects {
                 render_pass.set_vertex_buffer(0, obj.vertex_buffer().slice(..));
                 // TODO: consider changing IndexFormat to Uint32

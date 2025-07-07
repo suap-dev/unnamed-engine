@@ -1,10 +1,10 @@
-use wgpu::util::DeviceExt;
+use wgpu::{Buffer, util::DeviceExt};
 
 use crate::graphics::{Mesh, Transform};
 
 struct RenderData {
-    vertex_buffer: wgpu::Buffer,
-    index_buffer: wgpu::Buffer,
+    vertex_buffer: Buffer,
+    index_buffer: Buffer,
     index_count: u16,
 }
 
@@ -20,11 +20,11 @@ pub struct RenderObject {
     render_data: Option<RenderData>,
 }
 impl RenderObject {
-    pub fn new(mesh: &Mesh, name: Option<&str>) -> Self {
+    pub fn new(mesh: Mesh, name: Option<&str>, transform: Transform) -> Self {
         Self {
-            mesh: mesh.clone(),
+            mesh,
             name: name.map(|name| name.to_string()),
-            transform: Default::default(),
+            transform,
             render_data: None,
         }
     }

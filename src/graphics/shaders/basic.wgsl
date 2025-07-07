@@ -27,6 +27,7 @@ var<uniform> surface_uniform: SurfaceUniform;
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
     let position = scale(in.position, surface_uniform.size);
+    // let position = in.position;
 
     var out: VertexOutput;
     out.position = vec4f(position, 0, 1);
@@ -36,7 +37,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4f {
-    return vec4f(in.color, 1); // use in.color, not in
+    return vec4f(in.color, 1);
 }
 
 fn rotate_2d(v: vec2f, angle: f32) -> vec2f {
