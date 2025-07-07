@@ -10,14 +10,17 @@ use winit::{
 
 use crate::{
     app::{State, events},
-    graphics::{GraphicsContext, RenderObject, primitives},
+    graphics::{
+        GraphicsContext, RenderObject, primitives,
+        uniforms::{SurfaceSizeUniform, TimeUniform, UniformKind},
+    },
 };
 
 const WINDOW_TITLE: &str = "unnamed-engine";
 
 pub struct App {
     window: Option<Arc<Window>>,
-    wgpu_context: Option<GraphicsContext>,
+    graphics_context: Option<GraphicsContext>,
     state: State,
     rendering_active: bool,
 }
@@ -33,7 +36,7 @@ impl App {
     fn new() -> Self {
         Self {
             window: None,
-            wgpu_context: None,
+            graphics_context: None,
             state: State {
                 render_objects: vec![RenderObject::new(
                     &primitives::regular_polygon(4, 0.7, wgpu::Color::BLACK),
@@ -77,9 +80,9 @@ impl ApplicationHandler for App {
             }
         };
 
-        if self.wgpu_context.is_none() {
+        if self.graphics_context.is_none() {
             match GraphicsContext::setup(&window, &mut self.state) {
-                Ok(wgpu_context) => self.wgpu_context = Some(wgpu_context),
+                Ok(graphics_context) => self.graphics_context = Some(graphics_context),
                 Err(err) => log::error!("Unable to set up graphics: {err}"),
             }
         }
@@ -121,11 +124,12 @@ impl ApplicationHandler for App {
             }
             WindowEvent::RedrawRequested => {
                 let window = self.window.as_ref().unwrap();
-                let surface_size = window.inner_size();
 
-                let wgpu_context = self.wgpu_context.as_mut().unwrap();
-                wgpu_context.update_uniforms(surface_size, self.state.timer.elapsed());
-                if let Err(err) = wgpu_context.render(&self.state) {
+                let graphics_context = self.graphics_context.as_mut().unwrap();
+                graphics_context.update_uniform(UniformKind::Time(TimeUniform::new(
+                    self.state.timer.elapsed().as_secs_f32(),
+                )));
+                if let Err(err) = graphics_context.render(&self.state) {
                     log::error!("Unable to render: {err}");
                 }
 
@@ -134,9 +138,9 @@ impl ApplicationHandler for App {
                 };
             }
             WindowEvent::Resized(size) => {
-                let wgpu_context = self.wgpu_context.as_mut().unwrap();
+                let graphics_context = self.graphics_context.as_mut().unwrap();
                 if log::log_enabled!(log::Level::Debug) {
-                    let current_surface_size = wgpu_context.get_surface_size();
+                    let current_surface_size = graphics_context.get_surface_size();
                     log::debug!(
                         "Resizing window. Current surface size: {{w: {}, h: {}}}, requested size: {{w: {}, h: {}}}",
                         current_surface_size.width,
@@ -145,9 +149,13 @@ impl ApplicationHandler for App {
                         size.height
                     );
                 }
-                match wgpu_context.resize_surface(size.width, size.height) {
+                match graphics_context.resize_surface(size.width, size.height) {
                     Ok(_) => {
                         self.rendering_active = true;
+
+                        graphics_context.update_uniform(UniformKind::Surface(
+                            SurfaceSizeUniform::new(size.width as f32, size.height as f32),
+                        ));
                         log::debug!("Window resized");
                     }
                     Err(err) => {

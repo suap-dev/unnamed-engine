@@ -1,5 +1,8 @@
-struct AppDataUniform {
-    surface_size: vec2f,
+struct SurfaceUniform {
+    size: vec2f,
+}
+
+struct TimeUniform {
     time: f32,
 }
 
@@ -14,13 +17,16 @@ struct VertexOutput {
 }
 
 const tau = 6.283185307179586;
-
 @group(0) @binding(0)
-var<uniform> app_data: AppDataUniform;
+var<uniform> time_uniform: TimeUniform;
+
+@group(0) @binding(1)
+var<uniform> surface_uniform: SurfaceUniform;
+
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
-    let position = scale(in.position, app_data.surface_size);
+    let position = scale(in.position, surface_uniform.size);
 
     var out: VertexOutput;
     out.position = vec4f(position, 0, 1);

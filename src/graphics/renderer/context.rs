@@ -1,4 +1,4 @@
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
 
 use wgpu::*;
 use winit::dpi::PhysicalSize;
@@ -7,7 +7,7 @@ use crate::{
     app::State,
     graphics::renderer::{
         pipeline,
-        uniforms::{AppDataUniform, Uniforms},
+        uniforms::{UniformKind, Uniforms},
     },
 };
 
@@ -112,10 +112,7 @@ impl GraphicsContext {
         Ok(())
     }
 
-    pub fn update_uniforms(&mut self, surface_size: PhysicalSize<u32>, time: Duration) {
-        self.uniforms.update(
-            &self.queue,
-            &AppDataUniform::new(surface_size, time.as_secs_f32()),
-        );
+    pub fn update_uniform(&mut self, uniform: UniformKind) {
+        self.uniforms.update(&self.queue, uniform);
     }
 }

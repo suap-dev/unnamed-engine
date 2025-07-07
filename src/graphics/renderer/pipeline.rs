@@ -75,13 +75,13 @@ pub fn create_render_pipeline(
     };
 
     let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
-        label: Some("Pipeline Layout #0"),
+        label: Some("Pipeline Layout"),
         bind_group_layouts: &[bind_group_layout],
         push_constant_ranges: &[],
     });
 
     device.create_render_pipeline(&RenderPipelineDescriptor {
-        label: Some("Render Pipeline #0"),
+        label: Some("Render Pipeline"),
         layout: Some(&pipeline_layout),
         vertex: vertex_state,
         primitive: PrimitiveState::default(),

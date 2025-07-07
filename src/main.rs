@@ -1,4 +1,4 @@
-// #![allow(dead_code)] // TODO: disallow dead_code when ready
+#![allow(dead_code)] // TODO: disallow dead_code when ready
 
 mod app;
 mod graphics;
