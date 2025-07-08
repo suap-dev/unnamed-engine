@@ -1,5 +1,4 @@
 mod geometry;
-mod math;
 mod render_object;
 mod renderer;
 mod transform;

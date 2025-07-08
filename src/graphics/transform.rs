@@ -1,6 +1,6 @@
 use num_traits::AsPrimitive;
 
-use crate::graphics::math::to_radians;
+use crate::math::to_radians;
 
 #[derive(Clone, Copy)]
 pub struct Transform {

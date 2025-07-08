@@ -3,13 +3,13 @@ use std::{any::type_name, mem::size_of, num::NonZeroU64};
 use bytemuck::{Pod, Zeroable};
 use wgpu::*;
 
-pub struct Uniforms {
+pub struct GlobalUniforms {
     layout: BindGroupLayout,
     bind_group: BindGroup,
     time_buffer: Buffer,
     surface_buffer: Buffer,
 }
-impl Uniforms {
+impl GlobalUniforms {
     pub fn new(device: &Device) -> Self {
         // TODO: we can make it safer by makind a method that will return tuples (binding, entry, buffer)
         let time_entry = entry::<TimeUniform>(0, ShaderStages::VERTEX);

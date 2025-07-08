@@ -39,9 +39,10 @@ impl App {
             graphics_context: None,
             state: State {
                 render_objects: vec![RenderObject::new(
-                    primitives::regular_polygon(4, 0.7, wgpu::Color::BLACK),
+                    primitives::regular_polygon(3, 0.7, wgpu::Color::BLACK),
                     Some("The Square"),
-                    Transform::default(),
+                    // TODO: send transform to gpu?
+                    Transform::builder().position(-0.5, -0.5).build(), // currently does NOTHING
                 )],
                 cursor_position: PhysicalPosition::default(),
                 clear_color: wgpu::Color {

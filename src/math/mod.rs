@@ -1,3 +1,5 @@
+mod vec2;
+
 use std::f64::consts::TAU;
 
 use num_traits::AsPrimitive;

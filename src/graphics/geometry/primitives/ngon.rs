@@ -1,6 +1,6 @@
 use std::f64::consts::TAU;
 
-use crate::graphics::{Vertex, math};
+use crate::{graphics::Vertex, math};
 
 pub fn vertices(n: u16, circumradius: f32, color: wgpu::Color) -> Vec<Vertex> {
     let mut vertices = Vec::new();

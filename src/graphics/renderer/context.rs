@@ -7,7 +7,7 @@ use crate::{
     app::State,
     graphics::renderer::{
         pipeline,
-        uniforms::{UniformKind, Uniforms},
+        uniforms::{GlobalUniforms, UniformKind},
     },
 };
 
@@ -17,7 +17,7 @@ pub struct GraphicsContext {
     device: Device,
     queue: Queue,
     pipeline: RenderPipeline,
-    uniforms: Uniforms,
+    uniforms: GlobalUniforms,
 }
 
 impl GraphicsContext {
@@ -29,7 +29,7 @@ impl GraphicsContext {
         let adapter = pipeline::request_adapter(instance, &surface)?;
         let (device, queue) = pipeline::request_device(&adapter)?;
         let surface_config = pipeline::create_surface_config(window, &surface, adapter);
-        let uniforms = Uniforms::new(&device);
+        let uniforms = GlobalUniforms::new(&device);
 
         let pipeline =
             pipeline::create_render_pipeline(&device, &surface_config, uniforms.layout());
