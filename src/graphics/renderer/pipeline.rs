@@ -47,7 +47,7 @@ pub fn create_surface_config(
 pub fn create_render_pipeline(
     device: &Device,
     surface_config: &SurfaceConfiguration,
-    bind_group_layout: &BindGroupLayout,
+    bind_group_layouts: &[&BindGroupLayout],
 ) -> RenderPipeline {
     let shader_module = device.create_shader_module(ShaderModuleDescriptor {
         label: Some("Shader #0"),
@@ -76,7 +76,7 @@ pub fn create_render_pipeline(
 
     let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
         label: Some("Pipeline Layout"),
-        bind_group_layouts: &[bind_group_layout],
+        bind_group_layouts,
         push_constant_ranges: &[],
     });
 

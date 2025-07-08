@@ -31,8 +31,14 @@ impl GraphicsContext {
         let surface_config = pipeline::create_surface_config(window, &surface, adapter);
         let uniforms = GlobalUniforms::new(&device);
 
-        let pipeline =
-            pipeline::create_render_pipeline(&device, &surface_config, uniforms.layout());
+        let pipeline = pipeline::create_render_pipeline(
+            &device,
+            &surface_config,
+            &[
+                uniforms.layout(),
+                &crate::graphics::Transform::bind_group_layout(&device),
+            ],
+        );
 
         surface.configure(&device, &surface_config);
         state.ensure_render_data(&device);
@@ -101,6 +107,14 @@ impl GraphicsContext {
             // TODO: rethink ensure_render_data usage. it's quite strange I think. maybe on state-change not on every render?
             state.ensure_render_data(&self.device);
             for obj in &state.render_objects {
+                {
+                    self.queue.write_buffer(
+                        obj.transform_buffer(),
+                        0,
+                        bytemuck::cast_slice(&[obj.transform]),
+                    );
+                    render_pass.set_bind_group(1, obj.transform_bind_group(), &[]);
+                }
                 render_pass.set_vertex_buffer(0, obj.vertex_buffer().slice(..));
                 // TODO: consider changing IndexFormat to Uint32
                 render_pass.set_index_buffer(obj.index_buffer().slice(..), IndexFormat::Uint16);

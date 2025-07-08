@@ -3,7 +3,7 @@ use std::{sync::Arc, time::Instant};
 use winit::{
     application::ApplicationHandler,
     dpi::{PhysicalPosition, PhysicalSize},
-    event::WindowEvent,
+    event::{ElementState, WindowEvent},
     event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
     window::{Window, WindowAttributes, WindowId},
 };
@@ -110,21 +110,17 @@ impl ApplicationHandler for App {
                     self.state.cursor_position
                 );
 
-                self.state.add_object(RenderObject::new(
-                    primitives::triangle(
-                        0.1,
-                        wgpu::Color {
-                            g: 0.25,
-                            r: 0.25,
-                            b: 0.25,
-                            a: 1.0,
-                        },
-                    ),
-                    Some("TestTriangle"),
-                    Transform::builder()
-                        .physical_position(self.state.cursor_position)
-                        .build(),
-                ));
+                if state == ElementState::Pressed {
+                    let surface_size = self.window.as_ref().unwrap().inner_size();
+                    self.state.add_object(RenderObject::new(
+                        primitives::triangle(0.1, wgpu::Color::BLACK),
+                        Some("TestTriangle"),
+                        Transform::builder()
+                            .physical_position(self.state.cursor_position, surface_size)
+                            // .position(x, y)
+                            .build(),
+                    ));
+                }
             }
             WindowEvent::MouseWheel { delta, phase, .. } => {
                 log::debug!(
