@@ -8,7 +8,7 @@ pub fn rotated_2d<T: AsPrimitive<f64>, U: AsPrimitive<f64>>(v: [T; 2], angle: U)
     let c = angle.as_().cos();
     let s = angle.as_().sin();
 
-    [(x * c - y * s), x * s + y * s]
+    [(x * c - y * s), x * s + y * c]
 }
 
 pub fn to_radians<T: AsPrimitive<f64>>(degrees: T) -> f64 {
