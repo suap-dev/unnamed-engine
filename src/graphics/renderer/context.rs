@@ -24,7 +24,10 @@ impl GraphicsContext {
     pub fn setup(window: &Arc<winit::window::Window>, state: &mut State) -> anyhow::Result<Self> {
         log::debug!("Setting up wgpu");
 
-        let instance = Instance::new(&InstanceDescriptor::default());
+        let instance = Instance::new(&InstanceDescriptor {
+            backends: Backends::PRIMARY,
+            ..Default::default()
+        });
         let surface = instance.create_surface(window.clone())?;
         let adapter = pipeline::request_adapter(instance, &surface)?;
         let (device, queue) = pipeline::request_device(&adapter)?;

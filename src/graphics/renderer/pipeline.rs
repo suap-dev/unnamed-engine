@@ -5,7 +5,17 @@ use wgpu::*;
 use crate::graphics::Vertex;
 
 pub fn request_device(adapter: &Adapter) -> Result<(Device, Queue), RequestDeviceError> {
-    pollster::block_on(adapter.request_device(&DeviceDescriptor::default()))
+    let desc = DeviceDescriptor {
+        required_limits: Limits {
+            max_texture_dimension_1d: 4096,
+            max_texture_dimension_2d: 4096,
+            max_texture_dimension_3d: 4096,
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+
+    pollster::block_on(adapter.request_device(&desc))
 }
 
 pub fn request_adapter(
