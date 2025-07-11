@@ -97,6 +97,7 @@ impl GraphicsContext {
                         load: LoadOp::Clear(state.clear_color),
                         store: StoreOp::default(),
                     },
+                    depth_slice: None,
                 })],
                 ..Default::default()
             });
