@@ -2,16 +2,12 @@ use std::sync::Arc;
 
 use winit::{
     event::{ElementState, KeyEvent},
-    event_loop::ControlFlow,
+    event_loop::{ActiveEventLoop, ControlFlow},
     keyboard::{KeyCode, PhysicalKey},
     window::Window,
 };
 
-pub fn handle_key_event(
-    key_event: KeyEvent,
-    event_loop: &winit::event_loop::ActiveEventLoop,
-    window: &Arc<Window>,
-) {
+pub fn handle_key_event(key_event: KeyEvent, event_loop: &ActiveEventLoop, window: &Arc<Window>) {
     let KeyEvent {
         physical_key: PhysicalKey::Code(key_code),
         state,
@@ -33,11 +29,11 @@ pub fn handle_key_event(
     }
 }
 
-pub fn exit(event_loop: &winit::event_loop::ActiveEventLoop) {
+pub fn exit(event_loop: &ActiveEventLoop) {
     event_loop.exit();
 }
 
-fn toggle_control_flow(event_loop: &winit::event_loop::ActiveEventLoop) {
+fn toggle_control_flow(event_loop: &ActiveEventLoop) {
     let previous_flow = event_loop.control_flow();
     let new_flow = match previous_flow {
         ControlFlow::Poll => ControlFlow::Wait,

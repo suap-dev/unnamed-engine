@@ -3,7 +3,7 @@ use std::{sync::Arc, time::Instant};
 use winit::{
     application::ApplicationHandler,
     dpi::{PhysicalPosition, PhysicalSize},
-    event::WindowEvent,
+    event::{ElementState, WindowEvent},
     event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
     window::{Window, WindowAttributes, WindowId},
 };
@@ -11,7 +11,7 @@ use winit::{
 use crate::{
     app::{State, events},
     graphics::{
-        GraphicsContext, RenderObject, primitives,
+        GraphicsContext, RenderObject, Transform, primitives,
         uniforms::{SurfaceSizeUniform, TimeUniform, UniformKind},
     },
 };
@@ -39,8 +39,10 @@ impl App {
             graphics_context: None,
             state: State {
                 render_objects: vec![RenderObject::new(
-                    &primitives::regular_polygon(4, 0.7, wgpu::Color::BLACK),
+                    primitives::regular_polygon(3, 0.7, wgpu::Color::BLACK),
                     Some("The Square"),
+                    // TODO: send transform to gpu?
+                    Transform::builder().position(-0.5, -0.5).build(), // currently does NOTHING
                 )],
                 cursor_position: PhysicalPosition::default(),
                 clear_color: wgpu::Color {
@@ -64,7 +66,7 @@ fn create_window(event_loop: &ActiveEventLoop) -> anyhow::Result<Arc<Window>> {
                     width: 1280,
                     height: 720,
                 })
-                .with_resizable(false),
+                .with_resizable(true),
         )?,
     ))
 }
@@ -107,6 +109,18 @@ impl ApplicationHandler for App {
                     state,
                     self.state.cursor_position
                 );
+
+                if state == ElementState::Pressed {
+                    let surface_size = self.window.as_ref().unwrap().inner_size();
+                    self.state.add_object(RenderObject::new(
+                        primitives::triangle(0.1, wgpu::Color::BLACK),
+                        Some("TestTriangle"),
+                        Transform::builder()
+                            .physical_position(self.state.cursor_position, surface_size)
+                            // .position(x, y)
+                            .build(),
+                    ));
+                }
             }
             WindowEvent::MouseWheel { delta, phase, .. } => {
                 log::debug!(
@@ -129,7 +143,7 @@ impl ApplicationHandler for App {
                 graphics_context.update_uniform(UniformKind::Time(TimeUniform::new(
                     self.state.timer.elapsed().as_secs_f32(),
                 )));
-                if let Err(err) = graphics_context.render(&self.state) {
+                if let Err(err) = graphics_context.render(&mut self.state) {
                     log::error!("Unable to render: {err}");
                 }
 

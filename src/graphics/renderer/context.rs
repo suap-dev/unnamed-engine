@@ -7,7 +7,7 @@ use crate::{
     app::State,
     graphics::renderer::{
         pipeline,
-        uniforms::{UniformKind, Uniforms},
+        uniforms::{GlobalUniforms, UniformKind},
     },
 };
 
@@ -17,7 +17,7 @@ pub struct GraphicsContext {
     device: Device,
     queue: Queue,
     pipeline: RenderPipeline,
-    uniforms: Uniforms,
+    uniforms: GlobalUniforms,
 }
 
 impl GraphicsContext {
@@ -29,10 +29,16 @@ impl GraphicsContext {
         let adapter = pipeline::request_adapter(instance, &surface)?;
         let (device, queue) = pipeline::request_device(&adapter)?;
         let surface_config = pipeline::create_surface_config(window, &surface, adapter);
-        let uniforms = Uniforms::new(&device);
+        let uniforms = GlobalUniforms::new(&device);
 
-        let pipeline =
-            pipeline::create_render_pipeline(&device, &surface_config, uniforms.layout());
+        let pipeline = pipeline::create_render_pipeline(
+            &device,
+            &surface_config,
+            &[
+                uniforms.layout(),
+                &crate::graphics::Transform::bind_group_layout(&device),
+            ],
+        );
 
         surface.configure(&device, &surface_config);
         state.ensure_render_data(&device);
@@ -72,7 +78,7 @@ impl GraphicsContext {
         Ok(())
     }
 
-    pub fn render(&self, state: &State) -> anyhow::Result<()> {
+    pub fn render(&self, state: &mut State) -> anyhow::Result<()> {
         log::debug!("Rendering");
 
         let output = self.surface.get_current_texture()?;
@@ -91,6 +97,7 @@ impl GraphicsContext {
                         load: LoadOp::Clear(state.clear_color),
                         store: StoreOp::default(),
                     },
+                    depth_slice: None,
                 })],
                 ..Default::default()
             });
@@ -98,7 +105,17 @@ impl GraphicsContext {
             render_pass.set_bind_group(0, self.uniforms.bind_group(), &[]);
             // TODO: instead of drawing all the objects separately, try keeping object kind/handle and then it's transform in
             // TODO: keep transforms in separate Vecs, not the entire objects; send transforms as uniforms
+            // TODO: rethink ensure_render_data usage. it's quite strange I think. maybe on state-change not on every render?
+            state.ensure_render_data(&self.device);
             for obj in &state.render_objects {
+                {
+                    self.queue.write_buffer(
+                        obj.transform_buffer(),
+                        0,
+                        bytemuck::cast_slice(&[obj.transform]),
+                    );
+                    render_pass.set_bind_group(1, obj.transform_bind_group(), &[]);
+                }
                 render_pass.set_vertex_buffer(0, obj.vertex_buffer().slice(..));
                 // TODO: consider changing IndexFormat to Uint32
                 render_pass.set_index_buffer(obj.index_buffer().slice(..), IndexFormat::Uint16);
